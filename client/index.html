@@ -9,20 +9,56 @@
     <link rel="icon" type="image/png" href="/logo.png" />
     <link rel="apple-touch-icon" href="/logo.png" />
 
-    <!-- Search engine + social share preview -->
-    <meta name="description" content="Turfgame.io — a free multiplayer .io game. Draw loops to claim turf, raid rivals, siege capitals, and rule the map." />
+    <meta name="theme-color" content="#0f1623" />
+    <link rel="canonical" href="https://turfgame.io/" />
+
+    <!-- Search engine -->
+    <meta name="description" content="Turfgame.io is a free multiplayer .io game. Draw loops to claim turf, fight rivals in the open, siege enemy capitals, and climb the leaderboard. No download — play instantly in your browser." />
+
+    <!-- Social share preview (Open Graph + Twitter) -->
     <meta property="og:type" content="website" />
-    <meta property="og:title" content="Turfgame.io" />
-    <meta property="og:description" content="Draw loops. Claim turf. Siege capitals. Rule the map." />
-    <meta property="og:image" content="/logo.png" />
-    <meta name="twitter:card" content="summary" />
-    <meta name="twitter:title" content="Turfgame.io" />
-    <meta name="twitter:description" content="Draw loops. Claim turf. Siege capitals. Rule the map." />
-    <meta name="twitter:image" content="/logo.png" />
+    <meta property="og:site_name" content="Turfgame.io" />
+    <meta property="og:url" content="https://turfgame.io/" />
+    <meta property="og:title" content="Turfgame.io — claim turf, siege capitals, rule the map" />
+    <meta property="og:description" content="A free multiplayer .io game. Draw loops to claim land, raid rivals, siege capitals, and top the leaderboard. Play instantly in your browser." />
+    <meta property="og:image" content="https://turfgame.io/logo.png" />
+    <meta property="og:image:width" content="512" />
+    <meta property="og:image:height" content="512" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Turfgame.io — claim turf, siege capitals, rule the map" />
+    <meta name="twitter:description" content="A free multiplayer .io game. Draw loops to claim land, raid rivals, siege capitals, and top the leaderboard." />
+    <meta name="twitter:image" content="https://turfgame.io/logo.png" />
+
+    <!-- Structured data: tells Google this is a free, browser-based multiplayer game -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "VideoGame",
+        "name": "Turfgame.io",
+        "url": "https://turfgame.io/",
+        "image": "https://turfgame.io/logo.png",
+        "description": "A free multiplayer .io territory game. Draw loops to claim turf, fight rivals, siege capitals, and climb the leaderboard.",
+        "genre": ["io game", "multiplayer", "strategy"],
+        "gamePlatform": "Web Browser",
+        "applicationCategory": "Game",
+        "operatingSystem": "Any (modern web browser)",
+        "playMode": "MultiPlayer",
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+      }
+    </script>
   </head>
   <body>
     <!-- PixiJS canvas mounts here, behind the UI overlays -->
     <div id="app"></div>
+
+    <!-- Crawlable fallback for no-JS bots; replaced by the game when JS runs. -->
+    <noscript>
+      <h1>Turfgame.io</h1>
+      <p>
+        Turfgame.io is a free multiplayer .io game. Draw loops to claim turf, fight rivals in the
+        open, siege enemy capitals, and climb the live leaderboard. JavaScript is required to play.
+      </p>
+    </noscript>
 
     <!-- Start screen (fades in on load) -->
     <div id="start-screen" class="overlay hidden">
