@@ -1,0 +1,25 @@
+{
+  "name": "@territory/server",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Colyseus authoritative game server (uWebSockets.js transport)",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node build/index.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@colyseus/schema": "^3.0.0",
+    "@colyseus/uwebsockets-transport": "^0.16.0",
+    "@territory/shared": "*",
+    "colyseus": "^0.16.0",
+    "dotenv": "^16.4.7"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.1",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3"
+  }
+}

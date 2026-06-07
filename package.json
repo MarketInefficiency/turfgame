@@ -1,0 +1,28 @@
+{
+  "name": "territory-io",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Territory.io — join-anytime .io territory game (monorepo root)",
+  "workspaces": [
+    "shared",
+    "server",
+    "client"
+  ],
+  "engines": {
+    "node": ">=18 <23"
+  },
+  "scripts": {
+    "predev": "npm run build -w @territory/shared",
+    "dev": "concurrently -k -n shared,server,client -c magenta,blue,green \"npm:dev:shared\" \"npm:dev:server\" \"npm:dev:client\"",
+    "dev:shared": "npm run dev -w @territory/shared",
+    "dev:server": "npm run dev -w @territory/server",
+    "dev:client": "npm run dev -w @territory/client",
+    "build": "npm run build -w @territory/shared && npm run build -w @territory/client && npm run build -w @territory/server",
+    "start": "npm run start -w @territory/server",
+    "typecheck": "npm run typecheck -w @territory/shared && npm run typecheck -w @territory/client && npm run typecheck -w @territory/server",
+    "lint": "echo \"(lint not configured yet — placeholder so the script exists)\""
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}

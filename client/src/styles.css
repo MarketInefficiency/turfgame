@@ -1,0 +1,601 @@
+:root {
+  --modal-bg: #ffffff;
+  --ink: #1d2430;
+  --muted: #6b7280;
+  --accent: #4f7cff;
+  --accent-ink: #ffffff;
+  --error: #d1453b;
+  --border: #e3e6ea;
+
+  /* shared dark-glass theme (home page + in-arena widgets) */
+  --glass-bg: rgba(17, 24, 39, 0.62);
+  --glass-border: rgba(255, 255, 255, 0.12);
+  --turf: #4ade80;
+  --text: rgba(255, 255, 255, 0.88);
+  --text-muted: rgba(255, 255, 255, 0.5);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: #ffffff;
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+/* PixiJS canvas sits behind everything */
+#app {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+}
+
+/* --- Fading overlays --- */
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 1;
+  transition: opacity 500ms ease;
+}
+.overlay.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* --- Home page (start screen) --- */
+#start-screen {
+  overflow: hidden;
+  background:
+    radial-gradient(900px 600px at 78% 12%, rgba(74, 222, 128, 0.2), transparent 60%),
+    radial-gradient(900px 600px at 15% 88%, rgba(96, 165, 250, 0.2), transparent 60%),
+    linear-gradient(150deg, #121a33 0%, #16243a 45%, #133035 100%);
+}
+/* scrolling grid evokes the game floor */
+#start-screen::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-size: 44px 44px;
+  animation: gridScroll 7s linear infinite;
+  pointer-events: none;
+}
+@keyframes gridScroll {
+  to {
+    background-position: 44px 44px;
+  }
+}
+
+/* floating coloured "turf" blobs behind the card */
+.bg-decor {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(8px);
+  opacity: 0.55;
+  animation: floatBlob 9s ease-in-out infinite;
+}
+.b1 { width: 130px; height: 130px; left: 8%; top: 18%; background: #ff7a59; animation-delay: 0s; }
+.b2 { width: 170px; height: 170px; left: 74%; top: 22%; background: #4ade80; animation-delay: -2s; }
+.b3 { width: 110px; height: 110px; left: 20%; top: 70%; background: #60a5fa; animation-delay: -4s; }
+.b4 { width: 150px; height: 150px; left: 82%; top: 68%; background: #c084fc; animation-delay: -1s; }
+.b5 { width: 90px; height: 90px; left: 50%; top: 8%; background: #fbbf24; animation-delay: -3s; }
+@keyframes floatBlob {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(0, -26px) scale(1.08);
+  }
+}
+
+/* --- Start-screen card (glass) --- */
+.modal {
+  position: relative;
+  width: min(92vw, 400px);
+  padding: 30px 28px 22px;
+  background: rgba(17, 24, 39, 0.62);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 20px;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  transition: transform 500ms ease;
+}
+.overlay.hidden .modal {
+  transform: scale(0.96);
+}
+
+.brand {
+  text-align: center;
+  margin-bottom: 22px;
+}
+.title {
+  margin: 0;
+  font-size: 44px;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  white-space: nowrap;
+  color: #ffffff;
+  text-shadow: 0 2px 18px rgba(74, 222, 128, 0.3);
+}
+.title-mid {
+  color: #4ade80;
+}
+.title .dot {
+  color: #fbbf24;
+}
+.tagline {
+  margin: 8px 0 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* Subtle how-to-play blurb at the bottom of the start card. */
+.howto {
+  margin: 14px 2px 0;
+  font-size: 11.5px;
+  line-height: 1.5;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.field {
+  display: block;
+  margin-bottom: 16px;
+}
+.field > span {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+input[type="text"] {
+  width: 100%;
+  padding: 12px 13px;
+  font-size: 15px;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 11px;
+  outline: none;
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+input[type="text"]::placeholder {
+  color: rgba(255, 255, 255, 0.35);
+}
+input[type="text"]:focus {
+  border-color: #4ade80;
+  box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.2);
+}
+input[type="text"]:disabled {
+  background: rgba(255, 255, 255, 0.03);
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.modes {
+  margin: 0 0 18px;
+  padding: 8px 14px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+}
+.modes legend {
+  padding: 0 6px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.5);
+}
+.modes label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 0;
+  font-size: 15px;
+  color: rgba(255, 255, 255, 0.88);
+  cursor: pointer;
+}
+.modes input[type="radio"] {
+  width: 16px;
+  height: 16px;
+  accent-color: #4ade80;
+}
+/* full width within the ROOM box → equal gap each side, horizontally centred */
+input[type="text"].room-code {
+  width: 100%;
+  margin: 4px 0 6px;
+}
+
+.play {
+  width: 100%;
+  padding: 14px 16px;
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  color: #06281a;
+  background: linear-gradient(180deg, #5de29a, #36c46e);
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  box-shadow: 0 8px 22px rgba(54, 196, 110, 0.4);
+  transition: transform 100ms ease, box-shadow 120ms ease, filter 120ms ease;
+}
+.play:hover {
+  filter: brightness(1.06);
+  transform: translateY(-1px);
+  box-shadow: 0 11px 26px rgba(54, 196, 110, 0.5);
+}
+.play:active {
+  transform: translateY(1px);
+  box-shadow: 0 5px 14px rgba(54, 196, 110, 0.4);
+}
+.play:disabled {
+  opacity: 0.6;
+  cursor: default;
+  filter: none;
+  transform: none;
+}
+
+.error {
+  min-height: 18px;
+  margin: 10px 2px 0;
+  font-size: 13px;
+  text-align: center;
+  color: #ff8a80;
+}
+
+/* --- "Buy me a coffee" donation links --- */
+.kofi {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  text-decoration: none;
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 8px 14px;
+  cursor: pointer;
+  transition: transform 120ms ease, filter 120ms ease, opacity 200ms ease, border-color 120ms ease, color 120ms ease;
+}
+.kofi-cup {
+  font-size: 15px;
+}
+/* Home page: a warm, eye-catching pill, bottom-right of the card area */
+.kofi-home {
+  position: absolute;
+  right: 22px;
+  bottom: 20px;
+  color: #2a1c00;
+  background: linear-gradient(180deg, #ffd680, #ffb84d);
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  box-shadow: 0 8px 20px rgba(255, 184, 77, 0.35);
+}
+.kofi-home:hover {
+  filter: brightness(1.05);
+  transform: translateY(-1px);
+}
+/* In-game: subtle glass corner link, bottom-right */
+.kofi-game {
+  position: fixed;
+  right: 14px;
+  bottom: 14px;
+  z-index: 9;
+  color: var(--text);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  opacity: 0.65;
+}
+.kofi-game:hover {
+  opacity: 1;
+  border-color: var(--turf);
+  color: var(--turf);
+}
+.kofi-game.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* --- Arena news feed (bottom-left) --- */
+.events {
+  position: fixed;
+  left: 14px;
+  bottom: 12px;
+  z-index: 8;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  max-width: 380px;
+  pointer-events: none;
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+.ev-row {
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1.5;
+  color: #f3f5f7;
+  white-space: nowrap;
+  overflow: hidden;
+  /* strong outline so it stays readable on the white (day) and black (night) floor */
+  text-shadow: 0 0 3px #000, 0 1px 2px #000, 1px 0 1px #000, -1px 0 1px #000;
+}
+.ev-name {
+  font-weight: 800;
+  text-shadow: 0 0 3px #000, 0 1px 2px #000, 1px 0 1px #000, -1px 0 1px #000;
+}
+
+/* --- In-game HUD --- */
+.hud {
+  position: fixed;
+  top: 14px;
+  right: 14px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  opacity: 1;
+  transition: opacity 400ms ease;
+}
+.hud.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+.room-tag,
+.leave {
+  color: var(--text);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 10px;
+  cursor: pointer;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3);
+  transition: border-color 120ms ease, color 120ms ease;
+}
+.room-tag {
+  padding: 7px 11px;
+  font: 13px ui-monospace, Consolas, monospace;
+}
+.leave {
+  padding: 8px 13px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.room-tag:hover,
+.leave:hover {
+  border-color: var(--turf);
+  color: var(--turf);
+}
+
+/* --- Top-left HUD column (leaderboard + compass) --- */
+.hud-left {
+  position: fixed;
+  top: 14px;
+  left: 14px;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  opacity: 1;
+  transition: opacity 400ms ease;
+}
+.hud-left.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* --- Leaderboard --- */
+.lb-panel {
+  width: 200px;
+  padding: 12px 14px;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 14px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* --- Active-combat stats (opponents you're battling) --- */
+.combat-panel {
+  width: 200px;
+  padding: 11px 14px;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 14px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+.combat-panel.hidden {
+  display: none; /* collapse out of the column when not fighting */
+}
+.combat-title {
+  margin-bottom: 9px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.combat-list {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+.combat-row {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+.combat-skin {
+  position: relative;
+  flex: none;
+  width: 22px;
+  height: 22px;
+}
+.combat-dot {
+  display: block;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  box-sizing: border-box;
+}
+.combat-crown {
+  position: absolute;
+  left: 50%;
+  top: -11px;
+  transform: translateX(-50%);
+  width: 22px;
+  height: auto; /* keep the crown's aspect ratio from the viewBox */
+  pointer-events: none;
+}
+.combat-castle {
+  width: 18px;
+  height: 15px;
+  flex: 0 0 auto;
+}
+.combat-power {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- Home compass --- */
+.compass {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 200px;
+  padding: 10px 14px;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 14px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+.compass-dial {
+  position: relative;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--glass-border);
+}
+.compass-arrow {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0;
+  height: 0;
+  border-left: 7px solid transparent;
+  border-right: 7px solid transparent;
+  border-bottom: 15px solid var(--turf); /* triangle points up by default */
+  transform: translate(-50%, -50%) rotate(0deg);
+  transform-origin: 50% 50%;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.45));
+  transition: opacity 200ms ease;
+}
+.compass-label {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.lb-title {
+  margin-bottom: 7px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.lb-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 2px 0;
+  font-size: 13px;
+  color: var(--text);
+}
+.lb-row.me {
+  font-weight: 700;
+  color: var(--turf);
+}
+.lb-rank {
+  width: 16px;
+  color: var(--text-muted);
+  text-align: right;
+}
+.lb-row.me .lb-rank {
+  color: var(--turf);
+}
+.lb-name {
+  flex: 1;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.lb-army {
+  font-variant-numeric: tabular-nums;
+}
+.lb-sep {
+  height: 1px;
+  margin: 6px 2px;
+  background: var(--glass-border);
+}
+
+/* --- Location/zone banner (bottom) + intrusion alert (top) --- */
+.zone-banner,
+.alert-banner {
+  position: fixed;
+  left: 50%;
+  transform: translate(-50%, 0);
+  z-index: 9;
+  font-size: 34px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  /* readable on white day floor, black night floor, and any territory color */
+  text-shadow:
+    0 1px 5px rgba(0, 0, 0, 0.4),
+    0 0 2px rgba(0, 0, 0, 0.3),
+    0 0 1px rgba(255, 255, 255, 0.3);
+}
+.zone-banner {
+  bottom: 16%;
+}
+.alert-banner {
+  top: 16%;
+}

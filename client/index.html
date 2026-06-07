@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Turfgame.io</title>
+
+    <!-- Browser tab + search-engine icon -->
+    <link rel="icon" type="image/png" href="/logo.png" />
+    <link rel="apple-touch-icon" href="/logo.png" />
+
+    <!-- Search engine + social share preview -->
+    <meta name="description" content="Turfgame.io — a free multiplayer .io game. Draw loops to claim turf, raid rivals, siege capitals, and rule the map." />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Turfgame.io" />
+    <meta property="og:description" content="Draw loops. Claim turf. Siege capitals. Rule the map." />
+    <meta property="og:image" content="/logo.png" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="Turfgame.io" />
+    <meta name="twitter:description" content="Draw loops. Claim turf. Siege capitals. Rule the map." />
+    <meta name="twitter:image" content="/logo.png" />
+  </head>
+  <body>
+    <!-- PixiJS canvas mounts here, behind the UI overlays -->
+    <div id="app"></div>
+
+    <!-- Start screen (fades in on load) -->
+    <div id="start-screen" class="overlay hidden">
+      <div class="bg-decor" aria-hidden="true">
+        <span class="blob b1"></span>
+        <span class="blob b2"></span>
+        <span class="blob b3"></span>
+        <span class="blob b4"></span>
+        <span class="blob b5"></span>
+      </div>
+      <div class="modal">
+        <div class="brand">
+          <h1 class="title">Turf<span class="title-mid">game</span><span class="dot">.io</span></h1>
+          <p class="tagline">Draw loops. Claim turf. Rule the map.</p>
+        </div>
+
+        <label class="field">
+          <span>Name</span>
+          <input
+            id="name-input"
+            type="text"
+            maxlength="8"
+            placeholder="your name"
+            autocomplete="off"
+            spellcheck="false"
+          />
+        </label>
+
+        <fieldset class="modes">
+          <legend>Room</legend>
+          <label><input type="radio" name="mode" value="random" checked /> Join a random room</label>
+          <label><input type="radio" name="mode" value="specific" /> Join a specific room</label>
+          <input
+            id="room-code"
+            type="text"
+            class="room-code"
+            placeholder="room code"
+            autocomplete="off"
+            spellcheck="false"
+            disabled
+          />
+          <label><input type="radio" name="mode" value="create" /> Create a new room</label>
+        </fieldset>
+
+        <button id="play-btn" class="play" type="button">Play</button>
+        <p id="form-error" class="error" role="alert"></p>
+
+        <p class="howto">
+          Move with the mouse. Hold left click to loop land and grab it. In the open, bigger
+          wins. Your turf kills intruders. Drain a capital before you can take it.
+        </p>
+      </div>
+
+      <a id="kofi-home" class="kofi kofi-home" target="_blank" rel="noopener noreferrer">
+        <span class="kofi-cup">☕</span> Buy me a coffee
+      </a>
+    </div>
+
+    <!-- In-game HUD (hidden until joined) -->
+    <div id="game-hud" class="hud hidden">
+      <button id="room-tag" class="room-tag" type="button" title="Click to copy the room code"></button>
+      <button id="leave-btn" class="leave" type="button">Leave</button>
+    </div>
+
+    <!-- Top-left HUD: leaderboard + home compass (hidden until joined) -->
+    <div id="hud-left" class="hud-left hidden">
+      <div id="leaderboard-panel" class="lb-panel">
+        <div class="lb-title">Leaderboard</div>
+        <div id="leaderboard"></div>
+      </div>
+      <div id="combat-panel" class="combat-panel hidden">
+        <div class="combat-title">In Combat</div>
+        <div id="combat-list" class="combat-list"></div>
+      </div>
+      <div class="compass">
+        <div class="compass-dial"><span id="compass-arrow" class="compass-arrow"></span></div>
+        <span class="compass-label">Home</span>
+      </div>
+    </div>
+
+    <!-- Location/zone banner (fades in, drifts down and out on zone change) -->
+    <div id="zone-banner" class="zone-banner"></div>
+
+    <!-- Intrusion alert (top; mirrors the zone banner, drifts up and out) -->
+    <div id="alert-banner" class="alert-banner"></div>
+
+    <!-- Arena news feed (bottom-left): joins, kills, conquests. Newest on top, fades out. -->
+    <div id="events" class="events" aria-live="polite"></div>
+
+    <!-- Subtle in-game donation link (bottom-right, hidden until joined) -->
+    <a id="kofi-game" class="kofi kofi-game hidden" target="_blank" rel="noopener noreferrer">
+      <span class="kofi-cup">☕</span> Buy me a coffee
+    </a>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

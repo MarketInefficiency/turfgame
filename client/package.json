@@ -1,0 +1,22 @@
+{
+  "name": "@territory/client",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "PixiJS + Vite client (renders state, predicts local movement)",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@territory/shared": "*",
+    "colyseus.js": "^0.16.0",
+    "pixi.js": "^8.6.6"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3",
+    "vite": "^6.0.11"
+  }
+}
