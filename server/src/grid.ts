@@ -25,6 +25,8 @@ export class ServerGrid {
   private readonly dirty = new Set<number>();
   /** Each owner's spawn/core cell — the component kept when contiguity is enforced. */
   private readonly cores = new Map<number, number>();
+  /** Cells that just turned to decaying rubble this tick; the room drains these for the crumble. */
+  private freshDecay: number[] = [];
 
   count(owner: number): number {
     return this.counts.get(owner) ?? 0;
@@ -41,6 +43,18 @@ export class ServerGrid {
     if (prev !== NEUTRAL) this.counts.set(prev, (this.counts.get(prev) ?? 1) - 1);
     if (owner !== NEUTRAL) this.counts.set(owner, (this.counts.get(owner) ?? 0) + 1);
     this.dirty.add(idx);
+    // Any cell that becomes rubble (a player loses it to neutral via shed/sever/decay/death)
+    // is recorded so it crumbles away rather than vanishing. Cells captured INTO a player go
+    // straight to that owner here and are never recorded.
+    if (owner === DECAY_OWNER) this.freshDecay.push(idx);
+  }
+
+  /** Take (and clear) the cells that just turned to rubble, for the room's decay queue. */
+  takeFreshDecay(): number[] {
+    if (this.freshDecay.length === 0) return [];
+    const out = this.freshDecay;
+    this.freshDecay = [];
+    return out;
   }
 
   /**
@@ -132,7 +146,7 @@ export class ServerGrid {
     const k = this.count(owner);
     if (k === 0) return 0;
     if (n >= k) {
-      for (let i = 0; i < GRID_SIZE; i++) if (this.cells[i] === owner) this.setOwner(i, NEUTRAL);
+      for (let i = 0; i < GRID_SIZE; i++) if (this.cells[i] === owner) this.setOwner(i, DECAY_OWNER);
       return k;
     }
     const core = this.cores.get(owner); // never shed the capital cell — it holds the castle
@@ -146,7 +160,7 @@ export class ServerGrid {
     };
     idxs.sort((a, b) => d2(b) - d2(a)); // furthest first
     const limit = Math.min(n, idxs.length);
-    for (let i = 0; i < limit; i++) this.setOwner(idxs[i]!, NEUTRAL);
+    for (let i = 0; i < limit; i++) this.setOwner(idxs[i]!, DECAY_OWNER); // crumble, don't vanish
     return limit;
   }
 
@@ -386,7 +400,9 @@ export class ServerGrid {
       if (prev !== NEUTRAL && prev !== DECAY_OWNER && prev !== cutter) {
         if (blocked.has(prev)) return; // shielded by a powered capital
         affected.add(prev);
-        this.setOwner(idx, NEUTRAL);
+        // Turn it to decaying rubble (not instant neutral) so the severed patch CRUMBLES
+        // away like a fallen empire's land (setOwner records it for the decay queue).
+        this.setOwner(idx, DECAY_OWNER);
       }
     };
     for (const idx of interior) cut(idx);
@@ -440,7 +456,8 @@ export class ServerGrid {
     for (let k = 0; k < components.length; k++) {
       if (k === keep) continue;
       const comp = components[k]!;
-      const target = inheritBy !== undefined && this.touches(comp, inheritBy) ? inheritBy : NEUTRAL;
+      // Inherited by the cutter if it borders them; otherwise it's lost → rubble (crumbles).
+      const target = inheritBy !== undefined && this.touches(comp, inheritBy) ? inheritBy : DECAY_OWNER;
       for (const idx of comp) this.setOwner(idx, target);
     }
   }

@@ -23,7 +23,7 @@ export const MSG = {
   GRID_DELTA: "gridDelta",
   /** Server → one client: static foliage terrain map (RLE) on join. */
   FOLIAGE: "foliage",
-  /** Server → one client: you died (trigger death → start-screen flow, ui-ux §5). */
+  /** Server → one client: you died (carries the cause; triggers the defeat banner → start-screen flow, ui-ux §5). */
   DIED: "youDied",
   /** Server → one client: your in-progress claim line was voided (someone crossed it). */
   CLAIM_VOIDED: "claimVoided",
@@ -36,6 +36,18 @@ export const MSG = {
 /** Payload for CAP_BLOCKED: which operation the player attempted. */
 export interface CapBlocked {
   context: "claim" | "sever";
+}
+
+/**
+ * How the local player died — drives the wording of the defeat banner (ui-ux §5).
+ * `home`: killed standing on an enemy's land. `wild`: lost a wilderness skirmish.
+ * `wiped`: army ran out otherwise (e.g. decayed to nothing).
+ */
+export type DeathCause = "home" | "wild" | "wiped";
+
+/** Payload for DIED: how the player died (the client adds their final power locally). */
+export interface Died {
+  cause: DeathCause;
 }
 
 /** One actor in an arena event — name + skin color, so the feed can color the name. */

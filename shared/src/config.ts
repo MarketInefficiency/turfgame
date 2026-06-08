@@ -27,7 +27,12 @@ export const CONFIG = {
   DECAY_THRESHOLD: 5000, // army size where passive decay begins
   DECAY_C: 0.0002, // decay coefficient (gentle: big empires only bleed once very large)
   DECAY_EXP: 1.5, // decay acceleration exponent (>1 = accelerating)
-  DEATH_DECAY_RATE: 200, // cells/sec a dead player's land neutralizes (game-spec §10)
+  // Lost land (shed/sever/decay/death) turns to grey rubble, holds briefly so the crumble reads,
+  // then dissolves to neutral. Each cell dissolves on its OWN clock (CRUMBLE_DWELL plus a per-cell
+  // jitter up to CRUMBLE_WAVE) — there is no shared rate cap, so a patch disintegrates progressively
+  // yet multiple empires that fall at the same instant crumble together instead of one after another.
+  CRUMBLE_DWELL: 0.12, // seconds a rubble cell is guaranteed grey before it can dissolve
+  CRUMBLE_WAVE: 0.35, // extra per-cell stagger so a patch crumbles progressively (max grey = DWELL + WAVE)
   CONTIG_SWEEP_SEC: 1.0, // how often the server re-asserts territory contiguity (seconds)
 
   // --- World & simulation (game-spec §3, §13) ---
@@ -58,7 +63,7 @@ export const CONFIG = {
 
   // --- Spawning ---
   SPAWN_MARGIN: 200, // keep spawns this far from the map walls
-  START_TERRITORY_RADIUS: 2, // starting territory = filled disc of this cell radius
+  START_TERRITORY_RADIUS: 3, // starting territory = filled disc of this cell radius
   SPAWN_TRIES: 40, // random spawn attempts before scanning for any clear wilderness spot
   TRAIL_MAX_CELLS: 6000, // safety cap on an in-progress claim trail
 

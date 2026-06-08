@@ -19,6 +19,7 @@ import {
   worldToCellX,
   worldToCellY,
   type ArenaEvent,
+  type DeathCause,
   type InputPacket,
 } from "@territory/shared";
 import { Avatar, formatArmy } from "./avatar";
@@ -54,6 +55,8 @@ export interface GameView {
   leave(): void;
   /** Largest army the local player reached last session (0 if they never played). */
   lastScore(): number;
+  /** Flash a "Defeated…" banner at the top (cause + final power) before the start screen returns. */
+  deathFlash(cause: DeathCause): void;
 }
 
 /** A short-lived crumble effect spawned where an avatar died. */
@@ -704,6 +707,27 @@ export async function createGame(): Promise<GameView> {
     },
     lastScore(): number {
       return peakArmy; // kept across leave() so the home screen can show the last run
+    },
+    deathFlash(cause: DeathCause): void {
+      const el = document.getElementById("alert-banner");
+      if (!el) return;
+      const reason =
+        cause === "home"
+          ? "Crushed on enemy ground."
+          : cause === "wild"
+            ? "Outfought in the open."
+            : "Your army ran out.";
+      el.textContent = `Defeated. ${reason} Final power ${peakArmy.toLocaleString()}`;
+      el.style.color = "#ff5a52";
+      // Fade in and hold steady (no drift) — the start-screen fade right after covers its exit.
+      alertAnim?.cancel();
+      alertAnim = el.animate(
+        [
+          { opacity: 0, transform: "translate(-50%, -8px)" },
+          { opacity: 1, transform: "translate(-50%, 0px)" },
+        ],
+        { duration: 220, easing: "ease-out", fill: "forwards" },
+      );
     },
   };
 }

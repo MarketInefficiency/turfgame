@@ -1,6 +1,6 @@
 import "./styles.css";
 import type { Room } from "colyseus.js";
-import { MSG } from "@territory/shared";
+import { MSG, type Died } from "@territory/shared";
 import { createGame, type GameView } from "./game/game";
 import { join, type JoinMode } from "./net/client";
 import { KOFI_URL } from "./links";
@@ -36,6 +36,9 @@ const howto = el("howto");
 
 // Shown when there's no previous run; replaced by the last score after a death.
 const DEFAULT_TAGLINE = "Draw loops. Claim turf. Rule the map.";
+
+// How long the "Defeated…" banner holds over the arena before the start screen fades back in.
+const DEFEAT_BANNER_MS = 1700;
 
 // One sentence at a time on the home screen: how to play + the three ways to kill.
 const HOWTO_LINES = [
@@ -97,12 +100,16 @@ function backToStart(message?: string): void {
 }
 
 function wireRoom(room: Room): void {
-  // Death (army → 0, or debug self-destruct): return to the start screen, name kept.
-  room.onMessage(MSG.DIED, () => {
+  // Death: flash a "Defeated…" banner over the live arena (cause + final power), hold it just
+  // long enough to read, then leave the room and fade back to the start screen.
+  room.onMessage(MSG.DIED, (payload: Died | undefined) => {
     if (currentRoom !== room) return;
-    currentRoom = null; // mark handled so onLeave below skips it
-    void room.leave();
-    backToStart("You got taken out. Jump back in!");
+    currentRoom = null; // mark handled so onLeave below skips it (room stays live behind the banner)
+    game.deathFlash(payload?.cause ?? "wiped");
+    window.setTimeout(() => {
+      void room.leave();
+      backToStart();
+    }, DEFEAT_BANNER_MS);
   });
   // Fires only for unexpected drops: the Leave button nulls `currentRoom` before
   // calling room.leave(), so a user-initiated leave is already handled and skipped.

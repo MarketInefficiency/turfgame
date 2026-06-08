@@ -16,6 +16,8 @@ import {
   worldToCellX,
   worldToCellY,
   type ArenaEvent,
+  type DeathCause,
+  type Died,
   type InputPacket,
 } from "@territory/shared";
 import { Player, RoomState } from "./schema.js";
@@ -66,8 +68,11 @@ export class ArenaRoom extends Room<RoomState> {
   private nextOwnerId = 1;
 
   // Dead/abandoned cells (owner = DECAY_OWNER) awaiting rapid neutralization.
-  private decayQueue: number[] = [];
-  private decayAccum = 0;
+  // Rubble awaiting crumble: each cell holds grey until its own `due` time, then dissolves. There
+  // is no shared throughput cap, so empires that fall in the same tick crumble in parallel rather
+  // than serially. `simClock` is a dt-accumulated clock (no wall-clock in the sim).
+  private decayQueue: { idx: number; due: number }[] = [];
+  private simClock = 0;
 
   // Spawn-protection expiry (room-clock seconds) per player; while active they can't kill
   // or be killed (fixes a fresh spawn landing on a passer-by and instakilling them).
@@ -419,7 +424,11 @@ export class ArenaRoom extends Room<RoomState> {
     this.immuneUntil.delete(id);
     this.capFloat.delete(id);
 
-    this.clients.find((c) => c.sessionId === id)?.send(MSG.DIED);
+    // Tell the (human) victim how they fell, so the client can show a defeat banner before the
+    // start screen returns. killHome = killed on enemy soil, killWild = lost a wild skirmish,
+    // anything else (e.g. decayed to nothing) = a plain wipe.
+    const cause: DeathCause = killer?.kind === "killHome" ? "home" : killer?.kind === "killWild" ? "wild" : "wiped";
+    this.clients.find((c) => c.sessionId === id)?.send(MSG.DIED, { cause } satisfies Died);
     this.state.players.delete(id);
 
     // A downed bot doesn't disappear — it waits a human-like beat then "rejoins" small
@@ -432,10 +441,9 @@ export class ArenaRoom extends Room<RoomState> {
     console.log(`[arena] death ${id}`);
   }
 
-  /** Move an owner's cells into the decay pool (rendered grey, removed over time). */
+  /** Turn an owner's whole kingdom to rubble (grey); the tick drains it into the decay queue. */
   private startDecay(ownerId: number): void {
-    const cells = this.grid.recolor(ownerId, DECAY_OWNER);
-    for (const idx of cells) this.decayQueue.push(idx);
+    this.grid.recolor(ownerId, DECAY_OWNER);
   }
 
   /** Close a claim loop: inherit the enclosed region, then resolve victims' contiguity. */
@@ -452,7 +460,7 @@ export class ArenaRoom extends Room<RoomState> {
   private severLoop(cutterId: number, trail: Set<number>): void {
     const { victims, blocked } = this.grid.severEnclosed(cutterId, trail, this.poweredCapitals());
     if (blocked.size > 0) this.alertCapBlocked(cutterId, "sever");
-    for (const v of victims) this.grid.enforceContiguity(v); // remaining orphans → neutral
+    for (const v of victims) this.grid.enforceContiguity(v); // remaining orphans → rubble
     for (const v of victims) this.resolveVictim(v, cutterId);
   }
 
@@ -609,6 +617,14 @@ export class ArenaRoom extends Room<RoomState> {
 
     this.resolveInteractions(dt);
     this.contiguitySweep(dt);
+    // Everything that just became rubble this tick (shed, sever, orphaned scraps, deaths) joins
+    // the decay queue. Each cell gets its own due time: a base dwell plus a deterministic per-cell
+    // jitter (hashed off the cell index) so a patch disintegrates progressively instead of poofing.
+    const base = this.simClock + CONFIG.CRUMBLE_DWELL;
+    for (const idx of this.grid.takeFreshDecay()) {
+      const jitter = ((idx * 0.6180339887) % 1) * CONFIG.CRUMBLE_WAVE;
+      this.decayQueue.push({ idx, due: base + jitter });
+    }
     this.decayStep(dt);
 
     const delta = this.grid.flushDelta();
@@ -782,17 +798,20 @@ export class ArenaRoom extends Room<RoomState> {
     }
   }
 
-  /** Neutralize dead/abandoned cells at DEATH_DECAY_RATE (game-spec §10). */
+  /** Crumble rubble to neutral. Each cell dissolves the moment its own `due` passes — no shared
+   *  throughput cap — so a cell's grey time is bounded (DWELL + WAVE) regardless of how much else
+   *  is crumbling. That keeps small losses snappy AND lets several empires that fell on the same
+   *  tick crumble simultaneously rather than queueing up behind one another. Order-independent, so
+   *  cleared cells are swap-removed in place. */
   private decayStep(dt: number): void {
-    this.decayAccum += CONFIG.DEATH_DECAY_RATE * dt;
-    let budget = Math.floor(this.decayAccum);
-    this.decayAccum -= budget;
-    while (budget > 0 && this.decayQueue.length > 0) {
-      const idx = this.decayQueue.pop()!;
-      if (this.grid.cells[idx] === DECAY_OWNER) {
-        this.grid.setOwner(idx, NEUTRAL);
-        budget--;
-      }
+    this.simClock += dt;
+    const q = this.decayQueue;
+    for (let i = q.length - 1; i >= 0; i--) {
+      if (q[i]!.due > this.simClock) continue;
+      const idx = q[i]!.idx;
+      if (this.grid.cells[idx] === DECAY_OWNER) this.grid.setOwner(idx, NEUTRAL);
+      q[i] = q[q.length - 1]!;
+      q.pop();
     }
   }
 
