@@ -863,29 +863,35 @@ export class ArenaRoom extends Room<RoomState> {
   }
 }
 
-/** Bresenham line over cell indices; calls `visit` for each cell on the path. */
+/**
+ * 4-connected line over cell indices; calls `visit` for each cell on the path. Unlike a
+ * plain Bresenham line, this steps ONE axis at a time, so consecutive cells always share an
+ * edge (never just a corner). That matters for the claim trail: two strokes that cross must
+ * land on a shared cell, otherwise a self-cross — which is what triggers a sever loop — can
+ * slip past at a half-cell offset and never register (game-spec §7 severing).
+ */
 function rasterLine(fromIdx: number, toIdx: number, visit: (idx: number) => void): void {
   let x0 = cellX(fromIdx);
   let y0 = cellY(fromIdx);
   const x1 = cellX(toIdx);
   const y1 = cellY(toIdx);
   const dx = Math.abs(x1 - x0);
-  const dy = -Math.abs(y1 - y0);
+  const dy = Math.abs(y1 - y0);
   const sx = x0 < x1 ? 1 : -1;
   const sy = y0 < y1 ? 1 : -1;
-  let err = dx + dy;
-  for (;;) {
-    visit(cellIndex(x0, y0));
-    if (x0 === x1 && y0 === y1) break;
-    const e2 = 2 * err;
-    if (e2 >= dy) {
-      err += dy;
+  let ix = 0;
+  let iy = 0;
+  visit(cellIndex(x0, y0));
+  while (ix < dx || iy < dy) {
+    // Advance whichever axis is "less far along" — keeps the path next to the true line.
+    if ((1 + 2 * ix) * dy < (1 + 2 * iy) * dx) {
       x0 += sx;
-    }
-    if (e2 <= dx) {
-      err += dx;
+      ix++;
+    } else {
       y0 += sy;
+      iy++;
     }
+    visit(cellIndex(x0, y0));
   }
 }
 
