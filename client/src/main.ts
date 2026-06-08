@@ -31,6 +31,21 @@ const leaveBtn = el<HTMLButtonElement>("leave-btn");
 const hudLeft = el("hud-left");
 const kofiHome = el<HTMLAnchorElement>("kofi-home");
 const kofiGame = el<HTMLAnchorElement>("kofi-game");
+const tagline = el("tagline");
+const howto = el("howto");
+
+// Shown when there's no previous run; replaced by the last score after a death.
+const DEFAULT_TAGLINE = "Draw loops. Claim turf. Rule the map.";
+
+// One sentence at a time on the home screen: how to play + the three ways to kill.
+const HOWTO_LINES = [
+  "Move with your mouse. Hold left click to draw a loop and claim the land inside it.",
+  "Wilderness: ram a rival in the open and you both bleed army. The bigger one survives.",
+  "Trespass: stand on someone's claimed turf and the owner drops you in one hit.",
+  "Your capital banks power from every bit of army you strip off enemies in fights.",
+  "Siege: overlap an enemy's capital to drain its power into yours, then take their land.",
+  "Outgrow everyone and top the leaderboard.",
+];
 
 let game: GameView;
 let currentRoom: Room | null = null;
@@ -68,6 +83,9 @@ function enterGame(room: Room, name: string): void {
 function backToStart(message?: string): void {
   currentRoom = null;
   game.leave();
+  // Show last run's score where the tagline normally sits (default text if never played).
+  const score = game.lastScore();
+  tagline.textContent = score > 0 ? `You obtained ${score.toLocaleString()} power` : DEFAULT_TAGLINE;
   setVisible(hud, false);
   setVisible(hudLeft, false);
   setVisible(kofiGame, false);
@@ -186,9 +204,24 @@ async function copyRoomCode(): Promise<void> {
   }, 1000);
 }
 
+/** Cycle the tutorial lines on the home screen, one at a time, fading between them. */
+function startHowtoCycle(): void {
+  let i = 0;
+  howto.textContent = HOWTO_LINES[i]!;
+  window.setInterval(() => {
+    howto.style.opacity = "0";
+    window.setTimeout(() => {
+      i = (i + 1) % HOWTO_LINES.length;
+      howto.textContent = HOWTO_LINES[i]!;
+      howto.style.opacity = "1";
+    }, 800); // matches the .howto opacity transition
+  }, 5200);
+}
+
 async function boot(): Promise<void> {
   game = await createGame();
   wireStartScreen();
+  startHowtoCycle();
   // Fade the start screen in after first paint (ui-ux §1).
   requestAnimationFrame(() => requestAnimationFrame(() => setVisible(startScreen, true)));
 }

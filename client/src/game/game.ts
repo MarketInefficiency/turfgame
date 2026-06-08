@@ -52,6 +52,8 @@ interface PlayerLike {
 export interface GameView {
   enter(room: Room, name: string): void;
   leave(): void;
+  /** Largest army the local player reached last session (0 if they never played). */
+  lastScore(): number;
 }
 
 /** A short-lived crumble effect spawned where an avatar died. */
@@ -112,6 +114,7 @@ export async function createGame(): Promise<GameView> {
   let goldDirty = false; // rebuild the private outline when the grid changes
   let goldOwner = -1; // owner the outline was last drawn for
   let prevArmy = 0; // for capture-pulse detection
+  let peakArmy = 0; // largest army reached this session, shown as the score on the home screen
   let capturePulse = 0; // 0..1, decays — pops the local avatar on a capture
   let gridReady = false; // first grid snapshot applied (avoids a spawn "wilderness" flash)
   let lastZoneOwner = -1; // owner of the cell we were last in, for the zone banner
@@ -157,6 +160,7 @@ export async function createGame(): Promise<GameView> {
         prevArmy = me.army;
       }
       local.army = me.army;
+      if (me.army > peakArmy) peakArmy = me.army; // track the run's high-water mark
       if (me.army > prevArmy + 2) capturePulse = 1; // a capture just landed
       prevArmy = me.army;
       if (input) stepMovement(local, { aimX: input.state.aimX, aimY: input.state.aimY }, dt);
@@ -635,6 +639,7 @@ export async function createGame(): Promise<GameView> {
       sendAccum = 0;
       zoom = CONFIG.ZOOM_WILD;
       capturePulse = 0;
+      peakArmy = 0; // fresh run → reset the score
       goldOwner = -1;
       goldGfx.clear();
       gridReady = false;
@@ -696,6 +701,9 @@ export async function createGame(): Promise<GameView> {
       document.getElementById("combat-panel")?.classList.add("hidden");
       app.renderer.background.color = hexToNumber(CONFIG.DAY_BG); // reset for start screen
       local.has = false;
+    },
+    lastScore(): number {
+      return peakArmy; // kept across leave() so the home screen can show the last run
     },
   };
 }

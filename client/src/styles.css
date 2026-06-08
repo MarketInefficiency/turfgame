@@ -151,10 +151,16 @@ body {
 /* Subtle how-to-play blurb at the bottom of the start card. */
 .howto {
   margin: 14px 2px 0;
+  min-height: 2.8em; /* reserve space so the modal doesn't jump as lines swap */
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-size: 11.5px;
   line-height: 1.5;
   text-align: center;
-  color: rgba(255, 255, 255, 0.4);
+  color: rgba(255, 255, 255, 0.55);
+  opacity: 1;
+  transition: opacity 0.8s ease; /* fade each tutorial line in/out */
 }
 
 .field {

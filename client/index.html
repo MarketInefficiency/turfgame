@@ -72,7 +72,7 @@
       <div class="modal">
         <div class="brand">
           <h1 class="title">Turf<span class="title-mid">game</span><span class="dot">.io</span></h1>
-          <p class="tagline">Draw loops. Claim turf. Rule the map.</p>
+          <p id="tagline" class="tagline">Draw loops. Claim turf. Rule the map.</p>
         </div>
 
         <label class="field">
@@ -106,10 +106,8 @@
         <button id="play-btn" class="play" type="button">Play</button>
         <p id="form-error" class="error" role="alert"></p>
 
-        <p class="howto">
-          Move with the mouse. Hold left click to loop land and grab it. In the open, bigger
-          wins. Your turf kills intruders. Drain a capital before you can take it.
-        </p>
+        <!-- One tutorial line at a time, faded in/out by main.ts -->
+        <p id="howto" class="howto"></p>
       </div>
 
       <a id="kofi-home" class="kofi kofi-home" target="_blank" rel="noopener noreferrer">
