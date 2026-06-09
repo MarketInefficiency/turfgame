@@ -2,7 +2,10 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+    />
     <title>Turfgame.io</title>
 
     <!-- Browser tab + search-engine icon -->
@@ -59,6 +62,14 @@
         open, siege enemy capitals, and climb the live leaderboard. JavaScript is required to play.
       </p>
     </noscript>
+
+    <!-- Touch devices play in landscape only: a CSS-gated prompt covers everything in
+         portrait (iOS Safari can't truly lock orientation, so we block it instead). -->
+    <div id="rotate-gate" class="rotate-gate" aria-hidden="true">
+      <div class="rg-icon">📱</div>
+      <p class="rg-title">Rotate your device</p>
+      <p class="rg-sub">Turfgame plays in landscape</p>
+    </div>
 
     <!-- Start screen (fades in on load) -->
     <div id="start-screen" class="overlay hidden">
@@ -145,6 +156,19 @@
 
     <!-- Arena news feed (bottom-left): joins, kills, conquests. Newest on top, fades out. -->
     <div id="events" class="events" aria-live="polite"></div>
+
+    <!-- First-join touch controls hint (touch devices only): left = move, right = draw.
+         Fades out after 5s or once both thumbs are placed (handled in main.ts). -->
+    <div id="touch-hint" class="touch-hint hidden" aria-hidden="true">
+      <div class="th-side th-left">
+        <div class="th-stick"></div>
+        <span>Move</span>
+      </div>
+      <div class="th-side th-right">
+        <div class="th-draw">✏️</div>
+        <span>Hold to draw</span>
+      </div>
+    </div>
 
     <!-- Subtle in-game donation link (bottom-right, hidden until joined) -->
     <a id="kofi-game" class="kofi kofi-game hidden" target="_blank" rel="noopener noreferrer">

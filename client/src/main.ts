@@ -2,7 +2,9 @@ import "./styles.css";
 import type { Room } from "colyseus.js";
 import { MSG, type Died } from "@territory/shared";
 import { createGame, type GameView } from "./game/game";
+import { isTouchDevice } from "./game/input";
 import { join, type JoinMode } from "./net/client";
+import { SERVER_URL } from "./net/config";
 import { KOFI_URL } from "./links";
 import { loadName, saveName } from "./storage";
 
@@ -63,7 +65,13 @@ function selectedMode(): JoinMode {
 }
 
 function friendlyError(err: unknown): string {
-  const msg = err instanceof Error ? err.message : String(err);
+  // When Colyseus can't reach the server at all, it throws a raw XHR/WebSocket Event, which
+  // stringifies to "[object ...Event]". Treat anything that isn't an Error/string as a
+  // connection failure and name the endpoint we tried — the fastest way to spot a wrong URL.
+  const msg = err instanceof Error ? err.message : typeof err === "string" ? err : "";
+  if (!msg) {
+    return `Couldn't reach the server (${SERVER_URL}). Make sure it's running and on the same network.`;
+  }
   if (/not found|notfound|no rooms|seat/i.test(msg)) {
     return "That room wasn't found. Check the code, or join a random room.";
   }
@@ -81,6 +89,33 @@ function enterGame(room: Room, name: string): void {
   setVisible(hudLeft, true);
   setVisible(kofiGame, true);
   game.enter(room, name);
+  if (isTouchDevice()) showTouchHint();
+}
+
+/**
+ * Touch only: flash the "Move / Hold to draw" hint over the arena, since the right-side draw
+ * zone is invisible. Fades out after 5s or as soon as the player has placed both thumbs.
+ */
+function showTouchHint(): void {
+  const hint = document.getElementById("touch-hint");
+  if (!hint) return;
+  setVisible(hint, true);
+  let leftDown = false;
+  let rightDown = false;
+  let timer = 0;
+  const done = (): void => {
+    setVisible(hint, false);
+    window.removeEventListener("pointerdown", onTouch);
+    window.clearTimeout(timer);
+  };
+  const onTouch = (e: PointerEvent): void => {
+    if (e.pointerType !== "touch") return;
+    if (e.clientX < window.innerWidth / 2) leftDown = true;
+    else rightDown = true;
+    if (leftDown && rightDown) done(); // thumbs are in place — they've got it
+  };
+  window.addEventListener("pointerdown", onTouch);
+  timer = window.setTimeout(done, 5000);
 }
 
 function backToStart(message?: string): void {
@@ -173,6 +208,12 @@ function wireStartScreen(): void {
     input.addEventListener("keydown", (e) => {
       if (e.key === "Enter") void handlePlay();
     });
+    // iOS pushes the page up to keep a focused input above the keyboard and can leave the start
+    // screen scrolled a touch after it closes — snap everything back when the field blurs.
+    input.addEventListener("blur", () => {
+      window.scrollTo(0, 0);
+      startScreen.scrollTop = 0;
+    });
   }
   leaveBtn.addEventListener("click", () => {
     const room = currentRoom;
@@ -226,6 +267,7 @@ function startHowtoCycle(): void {
 }
 
 async function boot(): Promise<void> {
+  if (isTouchDevice()) document.body.classList.add("touch"); // enables the touch-scoped CSS
   game = await createGame();
   wireStartScreen();
   startHowtoCycle();

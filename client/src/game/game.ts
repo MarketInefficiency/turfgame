@@ -444,13 +444,15 @@ export async function createGame(): Promise<GameView> {
       `<span class="lb-name">${escapeHtml(p.name)}</span>` +
       `<span class="lb-army">${formatArmy(p.army)}</span></div>`;
 
-    const n = CONFIG.LEADERBOARD_SIZE;
+    // Phones (short, touch screens) only get room for a tiny board: top 4, then your own row.
+    const phone = window.matchMedia("(max-height: 540px) and (pointer: coarse)").matches;
+    const n = phone ? 4 : CONFIG.LEADERBOARD_SIZE;
     let html = ranked
       .slice(0, n)
       .map((p, i) => row(i + 1, p))
       .join("");
 
-    // If the local player isn't in the top N, pin their rank to the bottom.
+    // If the local player isn't in the top N, pin their rank to the bottom (the 5th slot on phones).
     const myIdx = ranked.findIndex((p) => p.id === myId);
     if (myIdx >= n) html += `<div class="lb-sep"></div>${row(myIdx + 1, ranked[myIdx]!)}`;
 

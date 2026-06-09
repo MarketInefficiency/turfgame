@@ -55,6 +55,10 @@ export const CONFIG = {
   // --- Movement input & netcode (control feel; game-spec §4, architecture.md) ---
   AIM_DEADZONE: 6, // cursor offset (screen px) below which the avatar is stationary
   AIM_FULL_SPEED_DIST: 220, // cursor offset (screen px) at which max speed is reached
+  // Touch only: thumb-drag radius (screen px) that maps to full speed. The on-screen joystick
+  // scales this up to AIM_FULL_SPEED_DIST so a comfortable thumb reach = max speed, feeding the
+  // exact same aim packet as the mouse (server/sim are unchanged).
+  JOY_RADIUS: 70,
   INPUT_SEND_HZ: 20, // client input-packet rate
   INPUT_STALE_SEC: 0.5, // stop applying a stored input older than this (anti ghost-glide)
   PREDICT_CORRECT: 4, // how hard local prediction is pulled toward server truth (per sec)
