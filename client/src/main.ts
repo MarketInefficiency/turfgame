@@ -156,6 +156,15 @@ function wireRoom(room: Room): void {
   });
 }
 
+/**
+ * Blur whatever text field is focused, closing the soft keyboard. Needed because in-app webviews
+ * (e.g. the CrazyGames app) give no keyboard "Done" affordance, so the page must dismiss it.
+ */
+function dismissKeyboard(): void {
+  const a = document.activeElement as HTMLElement | null;
+  if (a && (a.tagName === "INPUT" || a.tagName === "TEXTAREA")) a.blur();
+}
+
 async function handlePlay(): Promise<void> {
   formError.textContent = "";
 
@@ -174,6 +183,7 @@ async function handlePlay(): Promise<void> {
     return;
   }
 
+  dismissKeyboard(); // drop the soft keyboard as we join (webviews won't do it on their own)
   playBtn.disabled = true;
   playBtn.textContent = "Joining…";
   try {
@@ -204,17 +214,37 @@ function wireStartScreen(): void {
   }
 
   playBtn.addEventListener("click", () => void handlePlay());
+
+  // Keyboard handling for in-app webviews (e.g. the CrazyGames app), which don't shift the page
+  // when the soft keyboard opens and offer no way to dismiss it. All touch-only and desktop-safe:
+  //  - focus: pin the form to the top (CSS .kb-open) so the field stays above the keyboard.
+  //  - tap off the text fields: dismiss the keyboard.
+  //  - focus leaving the fields for good: unpin and reset any residual scroll.
   for (const input of [nameInput, roomCode]) {
     input.addEventListener("keydown", (e) => {
       if (e.key === "Enter") void handlePlay();
     });
-    // iOS pushes the page up to keep a focused input above the keyboard and can leave the start
-    // screen scrolled a touch after it closes — snap everything back when the field blurs.
-    input.addEventListener("blur", () => {
-      window.scrollTo(0, 0);
-      startScreen.scrollTop = 0;
+    input.addEventListener("focus", () => {
+      startScreen.classList.add("kb-open");
+      window.setTimeout(() => input.scrollIntoView({ block: "center" }), 50); // best-effort where the view does scroll
     });
   }
+  startScreen.addEventListener("focusout", () => {
+    // Defer a tick: if focus just hopped to the other field, stay pinned.
+    window.setTimeout(() => {
+      const a = document.activeElement;
+      if (a !== nameInput && a !== roomCode) {
+        startScreen.classList.remove("kb-open");
+        window.scrollTo(0, 0);
+        startScreen.scrollTop = 0;
+      }
+    }, 0);
+  });
+  startScreen.addEventListener("pointerdown", (e) => {
+    // Tapping a text field (or the name label) keeps the keyboard; tapping anything else drops it.
+    if ((e.target as Element).closest('input[type="text"], .field')) return;
+    dismissKeyboard();
+  });
   leaveBtn.addEventListener("click", () => {
     const room = currentRoom;
     currentRoom = null; // mark as user-initiated so wireRoom's onLeave skips it
