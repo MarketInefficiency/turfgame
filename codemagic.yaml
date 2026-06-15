@@ -1,0 +1,65 @@
+# Codemagic CI — cloud iOS build for the Capacitor app (no Mac needed).
+#
+# It builds the web client, generates the iOS project (we don't commit ios/ since it needs
+# macOS/CocoaPods), signs with your App Store Connect API key, and ships to TestFlight.
+#
+# Before the first run, set these in Codemagic:
+#   1. Add your App Store Connect API key as an integration, then put its NAME below
+#      (replace `turfgame-asc`).
+#   2. After you create the app in App Store Connect, put its numeric Apple ID in
+#      APP_STORE_APPLE_ID below.
+# Everything else is automatic.
+workflows:
+  ios-testflight:
+    name: Turfgame iOS (TestFlight)
+    instance_type: mac_mini_m2
+    max_build_duration: 60
+    integrations:
+      app_store_connect: turfgame-asc # <-- the name you give the API key integration in Codemagic
+    environment:
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: io.turfgame.app
+      vars:
+        XCODE_WORKSPACE: "client/ios/App/App.xcworkspace"
+        XCODE_SCHEME: "App"
+        BUNDLE_ID: "io.turfgame.app"
+        APP_STORE_APPLE_ID: "REPLACE_WITH_APP_APPLE_ID" # numeric id from App Store Connect
+      node: 22
+      xcode: latest
+      cocoapods: default
+    scripts:
+      - name: Install dependencies
+        script: npm ci
+      - name: Build web client
+        script: npm run build
+      - name: Add iOS platform + sync web assets
+        script: |
+          cd client
+          npx cap add ios
+          npx cap sync ios
+      - name: Generate app icon & splash
+        script: |
+          cd client
+          npx @capacitor/assets generate --ios --iconBackgroundColor '#0f1623' --splashBackgroundColor '#0f1623'
+      - name: Set build number (next TestFlight build)
+        script: |
+          cd client/ios/App
+          LATEST=$(app-store-connect get-latest-testflight-build-number "$APP_STORE_APPLE_ID" 2>/dev/null || echo 0)
+          agvtool new-version -all $(($LATEST + 1))
+      - name: Set up code signing
+        script: xcode-project use-profiles
+      - name: Install CocoaPods
+        script: |
+          cd client/ios/App
+          pod install
+      - name: Build IPA
+        script: |
+          xcode-project build-ipa --workspace "$XCODE_WORKSPACE" --scheme "$XCODE_SCHEME"
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
