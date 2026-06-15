@@ -334,10 +334,12 @@ input[type="text"].room-code {
 
 /* --- Account chip (home, top-right) + auth dialog --- */
 .account-chip {
-  position: absolute;
+  /* fixed (not absolute-in-flex): iOS WKWebView mis-maps the touch target of an absolutely
+     positioned child inside a centered flex container, so the chip looked tappable but ate no taps. */
+  position: fixed;
   top: 18px;
   right: 20px;
-  z-index: 3;
+  z-index: 12;
   max-width: 46vw;
   padding: 8px 14px;
   font-size: 13px;
@@ -1090,10 +1092,10 @@ input[type="text"].step-input {
 }
 /* Top-left cluster: the Shop chip + the medal balance to its right. */
 .home-topleft {
-  position: absolute;
+  position: fixed; /* see .account-chip — avoids the iOS abspos-in-flex hit-test bug */
   top: 18px;
   left: 20px;
-  z-index: 3;
+  z-index: 12;
   display: flex;
   align-items: center;
   gap: 10px;
