@@ -435,6 +435,38 @@ input[type="text"].room-code {
   border-color: var(--glass-border);
   color: var(--text-muted);
 }
+
+/* Delete-account link (App Store / Play requirement) — muted danger styling. */
+.link-btn.danger {
+  color: #ff6b6b;
+  margin-top: 10px;
+}
+.link-btn.danger:hover {
+  color: #ff8a8a;
+}
+
+/* Restore Purchases (native only) — centered link under the shop; hidden until shown by context. */
+.shop-restore {
+  display: block;
+  margin: 10px auto 0;
+}
+.shop-restore.hidden {
+  display: none;
+}
+
+/* Auto-renew subscription disclosure (native only); hidden until the membership screen on a store build. */
+.premium-legal {
+  margin: 8px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+.premium-legal a {
+  color: var(--turf);
+}
+.premium-legal.hidden {
+  display: none;
+}
 /* --- Death / run summary --- */
 .death-overlay {
   background: rgba(8, 12, 20, 0.55);

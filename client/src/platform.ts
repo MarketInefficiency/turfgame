@@ -9,6 +9,12 @@
 export type RunContext = "web" | "crazygames" | "ios" | "android";
 
 export function runContext(): RunContext {
+  // Dev-only override so the native/CrazyGames layout can be previewed in a browser, e.g.
+  // http://localhost:5173/?ctx=ios . Ignored in production builds (import.meta.env.DEV is false).
+  if (import.meta.env.DEV) {
+    const o = new URLSearchParams(location.search).get("ctx");
+    if (o === "ios" || o === "android" || o === "crazygames" || o === "web") return o;
+  }
   const cap = (window as unknown as { Capacitor?: { isNativePlatform?: () => boolean; getPlatform?: () => string } }).Capacitor;
   if (cap?.isNativePlatform?.()) {
     const p = cap.getPlatform?.();

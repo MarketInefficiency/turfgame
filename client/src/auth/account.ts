@@ -130,6 +130,19 @@ export async function signOut(): Promise<void> {
   await supabase.auth.signOut();
 }
 
+/**
+ * Permanently delete the signed-in player's account and data (App Store / Play requirement).
+ * Runs server-side via the `delete-account` edge function (a user can't delete their own auth row
+ * from the client), then signs out locally. Returns an error message, or null on success.
+ */
+export async function deleteAccount(): Promise<string | null> {
+  if (!supabase || !session) return "You're not signed in.";
+  const { error } = await supabase.functions.invoke("delete-account", { body: {} });
+  if (error) return error.message || "Could not delete your account. Please try again.";
+  await supabase.auth.signOut();
+  return null;
+}
+
 /** Re-fetch the signed-in player's profile (e.g. after earning medals on defeat). */
 export async function refreshAccount(): Promise<void> {
   await refreshProfile();

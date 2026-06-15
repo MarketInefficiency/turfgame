@@ -28,6 +28,7 @@ import { SERVER_URL } from "./net/config";
 import { accountsEnabled } from "./net/supabase";
 import {
   buyCosmetic,
+  deleteAccount,
   equipCosmetic,
   equippedId,
   isMember,
@@ -45,7 +46,8 @@ import {
 import { APP_STORE_URL, KOFI_URL, PLAY_STORE_URL } from "./links";
 import { loadName, saveName } from "./storage";
 import * as ads from "./ads";
-import { stripeCheckoutAllowed } from "./platform";
+import { runContext, stripeCheckoutAllowed } from "./platform";
+import { isNative, nativePurchase, nativeRestore } from "./native";
 
 /**
  * M1 entry point: drive the start screen → join → game flow.
@@ -85,6 +87,7 @@ const authClose = el<HTMLButtonElement>("auth-close");
 const authSignedout = el("auth-signedout");
 const authSignedin = el("auth-signedin");
 const authSignout = el<HTMLButtonElement>("auth-signout");
+const authDelete = el<HTMLButtonElement>("auth-delete");
 const authApple = el<HTMLButtonElement>("auth-apple");
 const authGoogle = el<HTMLButtonElement>("auth-google");
 const authEmail = el<HTMLInputElement>("auth-email");
@@ -111,6 +114,7 @@ const homeTopleft = el("home-topleft");
 const homeMedals = el("home-medals");
 const homeMedalCount = el("home-medal-count");
 const shopPremium = el<HTMLButtonElement>("shop-premium");
+const shopRestore = el<HTMLButtonElement>("shop-restore");
 const buyMedalsOverlay = el("buymedals-overlay");
 const buyMedalsClose = el<HTMLButtonElement>("buymedals-close");
 const packList = el("pack-list");
@@ -121,6 +125,7 @@ const premiumClose = el<HTMLButtonElement>("premium-close");
 const buyPremiumBtn = el<HTMLButtonElement>("buy-premium");
 const buyAdfreeBtn = el<HTMLButtonElement>("buy-adfree");
 const premiumNote = el("premium-note");
+const premiumLegal = el("premium-legal");
 const tagline = el("tagline");
 const howto = el("howto");
 const deathOverlay = el("death-overlay");
@@ -1014,6 +1019,21 @@ function wireAccount(): void {
     void signOut();
     closeAuth();
   });
+  authDelete.addEventListener("click", () => {
+    // Two-step confirm so a tap can't nuke an account by accident.
+    if (!confirm("Delete your account for good? Your profile and unlocked cosmetics will be removed. This can't be undone.")) {
+      return;
+    }
+    setAuthMsg("Deleting your account…");
+    void deleteAccount().then((err) => {
+      if (err) {
+        setAuthMsg(err);
+      } else {
+        setAuthMsg("");
+        closeAuth();
+      }
+    });
+  });
   // OAuth: on success the page redirects to the provider, so we only handle the error case.
   const oauth = (provider: "google" | "apple") => {
     setAuthMsg("Opening sign in…");
@@ -1234,6 +1254,13 @@ function wireShop(): void {
   });
   medalPlus.addEventListener("click", openBuyMedals);
   shopPremium.addEventListener("click", openPremium);
+  shopRestore.addEventListener("click", () => {
+    shopNote.textContent = "Restoring…";
+    void nativeRestore().then((r) => {
+      shopNote.textContent = r.message;
+      if (r.ok) void refreshAccount().then(renderShop);
+    });
+  });
   shopList.addEventListener("click", (e) => {
     const card = (e.target as Element).closest(".cz-card") as HTMLElement | null;
     if (!card) return;
@@ -1320,26 +1347,40 @@ function openPremium(): void {
   const noAds = member || adFree;
   buyAdfreeBtn.disabled = noAds;
   buyAdfreeBtn.textContent = noAds ? "Ads already removed" : "Remove Ads";
+  setVisible(premiumLegal, isNative()); // auto-renew disclosure is required beside a store subscription
   setVisible(premiumOverlay, true);
 }
 
-/** Send a signed-in player to Stripe Checkout for a product; show errors in the given note. */
+/** Buy a product: store IAP on native, Stripe Checkout on the web; show errors in the given note. */
 function checkout(product: string, note: HTMLElement): void {
-  // Stripe only works on the standalone site. In the CrazyGames iframe (and later the app webview)
-  // external checkout can't run, so point them to the website instead of failing silently.
+  // A purchase must land on an account so it can be granted/restored. Send guests to sign up first
+  // (close the sheets so the sign-in dialog isn't stuck behind them).
+  const needAccount = (): boolean => {
+    if (account?.signedIn) return false;
+    setVisible(buyMedalsOverlay, false);
+    setVisible(premiumOverlay, false);
+    setVisible(shopOverlay, false);
+    openAuth("Make a free account first so your purchase saves to it. It only takes a moment.");
+    return true;
+  };
+
+  // Native: store in-app purchase (RevenueCat). Stripe is never used inside the app.
+  if (isNative()) {
+    if (needAccount()) return;
+    note.textContent = "Opening store…";
+    void nativePurchase(product).then((r) => {
+      note.textContent = r.message;
+      if (r.ok) void refreshAccount();
+    });
+    return;
+  }
+  // CrazyGames iframe: external checkout can't run, so point them to the site.
   if (!stripeCheckoutAllowed()) {
     note.textContent = "Head to turfgame.io to grab this one.";
     return;
   }
-  if (!account?.signedIn) {
-    // Send guests to sign up rather than dead-ending on a red note (close the sheets first so the
-    // sign-in dialog isn't stuck behind them).
-    setVisible(buyMedalsOverlay, false);
-    setVisible(premiumOverlay, false);
-    setVisible(shopOverlay, false); // and the shop itself, or it sits on top of the sign-in card
-    openAuth("Make a free account to buy this. It only takes a moment.");
-    return;
-  }
+  // Web: Stripe Checkout.
+  if (needAccount()) return;
   note.textContent = "Opening checkout…";
   void startCheckout(product).then((err) => {
     if (err) note.textContent = err; // on success the page redirects to Stripe
@@ -1423,8 +1464,25 @@ function startHowtoCycle(): void {
   }, 5200);
 }
 
+/**
+ * Tailor the UI to where we're running. On the native iOS/Android app we hide things that don't
+ * belong inside a store app (the external Ko-fi donation link and the App Store / Google Play
+ * badges) and surface the store-required bits (Restore Purchases, subscription disclosure). One
+ * build, behavior switched by context — never a separate mobile codebase.
+ */
+function applyRunContext(): void {
+  const ctx = runContext();
+  document.body.classList.add(`ctx-${ctx}`);
+  if (isNative()) {
+    // External payment/donation surfaces aren't allowed alongside store IAP.
+    for (const elx of [kofiHome, kofiGame, appStoreLink, playLink]) setVisible(elx, false);
+    setVisible(shopRestore, true); // IAP apps must offer Restore Purchases
+  }
+}
+
 async function boot(): Promise<void> {
   if (isTouchDevice()) document.body.classList.add("touch"); // enables the touch-scoped CSS
+  applyRunContext();
   game = await createGame();
   await catalog.loadCatalog(); // DB cosmetics + today's rotation (falls back to built-ins if offline)
   wireStartScreen();
