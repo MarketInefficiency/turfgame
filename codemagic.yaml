@@ -58,8 +58,13 @@ workflows:
         script: |
           set -e
           keychain initialize
-          # Fresh account has no distribution certificate, and one can't be made without a private
-          # key — so generate an RSA key, create the cert from it, then create/fetch the App Store
+          # Apple caps distribution certificates at 2. Revoke any existing ones so repeated CI builds
+          # never hit the cap (already-uploaded TestFlight/App Store builds stay valid after this).
+          # Best-effort: wrapped so a CLI/JSON-shape mismatch can never fail the build.
+          { app-store-connect certificates list --type IOS_DISTRIBUTION --json > /tmp/dist_certs.json 2>/dev/null \
+              && python3 -c "import json;[print(c.get('id','')) for c in json.load(open('/tmp/dist_certs.json'))]" 2>/dev/null \
+              | while read -r cid; do [ -n "$cid" ] && app-store-connect certificates delete "$cid"; done; } || true
+          # Generate an RSA key, create the distribution cert from it, then create/fetch the App Store
           # profile, add the cert to the keychain, apply signing to the project, and archive.
           openssl genrsa -out /tmp/cert_key.pem 2048
           app-store-connect certificates create --type IOS_DISTRIBUTION --certificate-key=@file:/tmp/cert_key.pem --save

@@ -90,6 +90,15 @@ export async function createGame(): Promise<GameView> {
   if (!mount) throw new Error("missing #app mount node");
   mount.appendChild(app.canvas);
 
+  // iOS/Android webviews don't always fire a clean 'resize' when the orientation lock rotates the
+  // screen, leaving the canvas sized for the pre-rotation (portrait) width — half the arena blank.
+  // Re-measure on orientation/viewport changes, plus a short burst after boot to catch the lock
+  // settling. (resizeTo: window handles the steady state; this covers the rotation transient.)
+  const resizeNow = (): void => app.resize();
+  window.addEventListener("orientationchange", () => setTimeout(resizeNow, 150));
+  window.visualViewport?.addEventListener("resize", resizeNow);
+  for (const ms of [120, 350, 700, 1200]) setTimeout(resizeNow, ms);
+
   // ownerId → color, rebuilt each frame from the player map (drives territory paint).
   const colorByOwner = new Map<number, string>();
 
