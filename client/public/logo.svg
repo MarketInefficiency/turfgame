@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <radialGradient id="body" cx="40%" cy="34%" r="78%">
+      <stop offset="0" stop-color="#5aa6ff"/>
+      <stop offset="1" stop-color="#2360c6"/>
+    </radialGradient>
+    <!-- Sovereign's Edge blade gradient (same as in-game) -->
+    <linearGradient id="sov" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#fff0b0"/>
+      <stop offset="0.5" stop-color="#fffefa"/>
+      <stop offset="1" stop-color="#ffd86b"/>
+    </linearGradient>
+    <linearGradient id="swoosh" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#8ad8ff" stop-opacity="0"/>
+      <stop offset="0.5" stop-color="#bdecff" stop-opacity="0.85"/>
+      <stop offset="0.85" stop-color="#ffffff" stop-opacity="0.95"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="glow" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="3.2"/>
+    </filter>
+  </defs>
+
+  <!-- The avatar exactly as the game composites it: 1 avatar-unit = 4.6px, centred. -->
+  <g transform="translate(256,262) scale(4.6)">
+
+    <!-- ANGEL WINGS (black), behind the body — real in-game art (0..100 box → r*5 sprite). -->
+    <g transform="translate(-55,-55) scale(1.1)">
+      <g fill="#0c0c12" stroke="#8c8c94" stroke-width="2" stroke-linejoin="round">
+        <path d="M48,58 C37,49 23,38 14,19 C17,21 21,24 25,27 C20,29 21,34 26,36 C22,38 23,43 28,45 L23,53 C28,51 30,53 33,55 L29,62 C35,60 38,59 42,59 L39,65 C43,63 46,60 48,58 Z"/>
+        <g transform="translate(100,0) scale(-1,1)">
+          <path d="M48,58 C37,49 23,38 14,19 C17,21 21,24 25,27 C20,29 21,34 26,36 C22,38 23,43 28,45 L23,53 C28,51 30,53 33,55 L29,62 C35,60 38,59 42,59 L39,65 C43,63 46,60 48,58 Z"/>
+        </g>
+      </g>
+      <g fill="none" stroke="#4a4a52" stroke-width="1.1">
+        <path d="M44,55 C34,47 24,38 16,23 M40,57 C31,50 22,42 16,28"/>
+        <g transform="translate(100,0) scale(-1,1)"><path d="M44,55 C34,47 24,38 16,23 M40,57 C31,50 22,42 16,28"/></g>
+      </g>
+    </g>
+
+    <!-- BODY (blue circle) + contrasting border -->
+    <circle cx="0" cy="0" r="22" fill="url(#body)" stroke="#10204a" stroke-width="3"/>
+
+    <!-- SAMURAI ARMOUR over the lower body — real in-game art -->
+    <g transform="translate(-55,-55) scale(1.1)">
+      <path d="M29,56 C26,52 28,48 33,49 C36,50 38,53 38,56 C35,58 31,58 29,56 Z" fill="#2e323c" stroke="#15181f" stroke-width="1.3" stroke-linejoin="round"/>
+      <path d="M71,56 C74,52 72,48 67,49 C64,50 62,53 62,56 C65,58 69,58 71,56 Z" fill="#2e323c" stroke="#15181f" stroke-width="1.3" stroke-linejoin="round"/>
+      <path d="M30,52 C33,51 36,52 37,54 M70,52 C67,51 64,52 63,54" fill="none" stroke="#15181f" stroke-width="0.8" opacity="0.7"/>
+      <path d="M29,57 C29,53 31,52 34,53 C38,56 41,60 45,62 C48,63 52,63 55,62 C59,60 62,56 66,53 C69,52 71,53 71,57 C72,64 69,71 63,73 C55,74 45,74 37,73 C31,71 28,64 29,57 Z" fill="#3a3f4a" stroke="#15181f" stroke-width="2" stroke-linejoin="round"/>
+      <path d="M33,64 C45,66.5 55,66.5 67,64 M35,69 C45,71 55,71 65,69" fill="none" stroke="#15181f" stroke-width="1.2"/>
+      <path d="M44,62 L44,73 M56,62 L56,73" stroke="#e8c24a" stroke-width="0.9" opacity="0.8"/>
+    </g>
+
+    <!-- CROWN — the in-game gold leaderboard crown, sat on the head -->
+    <g transform="translate(0,-8.8)">
+      <polygon points="-20.24,0 -20.24,-15 -15.18,-5 -10.12,-19 -5.06,-5 0,-23 5.06,-5 10.12,-19 15.18,-5 20.24,-15 20.24,0" fill="#ffd24a" stroke="#382e10" stroke-width="2.4" stroke-linejoin="round"/>
+      <circle cx="0" cy="-6" r="2.8" fill="#ffeaad" stroke="#382e10" stroke-width="1"/>
+      <circle cx="-10.12" cy="-9" r="1.7" fill="#ffeaad" stroke="#382e10" stroke-width="0.8"/>
+      <circle cx="10.12" cy="-9" r="1.7" fill="#ffeaad" stroke="#382e10" stroke-width="0.8"/>
+    </g>
+
+    <!-- SLASH SWOOSH (behind the blade) — a bold tapered crescent the blade just cut through -->
+    <g>
+      <path d="M-26,6 Q2,-50 46,-22 Q12,-30 -26,6 Z" fill="url(#swoosh)" opacity="0.32" filter="url(#glow)"/>
+      <path d="M-23,3 Q3,-47 43,-23 Q10,-30 -23,3 Z" fill="url(#swoosh)" opacity="0.9"/>
+      <path d="M-21,2 Q3,-45 42,-23" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" opacity="0.92"/>
+    </g>
+
+    <!-- SOVEREIGN'S EDGE (epic sword) mid-slash. Sprite anchor (14,44) → rotated, held to the side. -->
+    <g transform="translate(5,3) rotate(47)">
+      <g transform="translate(-14,-44)">
+        <path d="M14,0 L7.6,12 L8.2,42 L19.8,42 L20.4,12 Z" fill="#fff3b0" opacity="0.3"/>
+        <path d="M14,1 L9,12 L9,41 L19,41 L19,12 Z" fill="url(#sov)" stroke="#b9892a" stroke-width="1.2" stroke-linejoin="round"/>
+        <path d="M14,3 L14,40" stroke="#ff8af0" stroke-width="1.6" opacity="0.45"/>
+        <path d="M14,3 L14,40" stroke="#8ad8ff" stroke-width="0.8" opacity="0.8"/>
+        <path d="M11,17 L17,17 M11,25 L17,25 M11,33 L17,33" stroke="#f7d36c" stroke-width="0.7" opacity="0.7"/>
+        <path d="M14,42 C5,39 1,44 3.5,47.5 C8,45 11,45 14,45 C17,45 20,45 24.5,47.5 C27,44 23,39 14,42 Z" fill="#f0c544" stroke="#7a5310" stroke-width="1.1" stroke-linejoin="round"/>
+        <circle cx="4.6" cy="45.4" r="1.5" fill="#a96bff" stroke="#7a5310" stroke-width="0.7"/>
+        <circle cx="23.4" cy="45.4" r="1.5" fill="#a96bff" stroke="#7a5310" stroke-width="0.7"/>
+        <rect x="11.4" y="45" width="5.2" height="11" rx="1" fill="#6a4a12" stroke="#3a2606" stroke-width="1"/>
+        <path d="M11.4,48 L16.6,49 M11.4,51 L16.6,52 M11.4,54 L16.6,55" stroke="#3a2606" stroke-width="0.6"/>
+        <circle cx="14" cy="59.6" r="3.4" fill="#a96bff" stroke="#7a5310" stroke-width="1.2"/>
+        <circle cx="12.9" cy="58.5" r="1.1" fill="#ffffff" opacity="0.85"/>
+      </g>
+    </g>
+
+  </g>
+</svg>
