@@ -31,7 +31,61 @@ export const MSG = {
   EVENT: "arenaEvent",
   /** Server → one client: your loop couldn't take an enemy capital that still has power. */
   CAP_BLOCKED: "capBlocked",
+  /** Client → server: the private-arena host starts the match (everyone in the lobby spawns). */
+  START_GAME: "startGame",
+  /** Client → server: a waiting player toggles their ready flag in the lobby. */
+  LOBBY_READY: "lobbyReady",
+  /** Server → client: the current private-arena lobby roster (who's waiting + the host). */
+  LOBBY: "lobby",
+  /** Server → one client: you're out of a death match (no respawn); carries your placing so far. */
+  ELIMINATED: "eliminated",
+  /** Server → room: the death match is over; carries the final ranking. */
+  MATCH_END: "matchEnd",
 } as const;
+
+/** Options a member passes to create a private arena. */
+export interface PrivateOptions {
+  /** Player cap, clamped server-side to 2..50. */
+  maxPlayers: number;
+  /** Wait in a lobby for the host to start, vs. drop straight into the arena on connect. */
+  lobby: boolean;
+  /** Last one standing: no respawn, eliminated players spectate, a ranking shows at the end. */
+  deathmatch: boolean;
+}
+
+/** One row of the private-arena lobby roster. */
+export interface LobbyMember {
+  name: string;
+  color: string;
+  host: boolean;
+  ready: boolean;
+}
+
+/** Payload for LOBBY: everyone currently waiting in the lobby. */
+export interface LobbyState {
+  players: LobbyMember[];
+}
+
+/** Payload for ELIMINATED: your place so far and how many started, shown while you spectate.
+ *  `byId` is the sessionId of whoever knocked you out, so the client can start by watching them. */
+export interface Eliminated {
+  place: number;
+  total: number;
+  byId?: string;
+}
+
+/** One row of a finished death match's ranking. */
+export interface RankRow {
+  place: number;
+  name: string;
+  color: string;
+  peak: number;
+}
+
+/** Payload for MATCH_END: the final standings, best place first. */
+export interface MatchEnd {
+  rankings: RankRow[];
+}
 
 /** Payload for CAP_BLOCKED: which operation the player attempted. */
 export interface CapBlocked {
@@ -45,9 +99,13 @@ export interface CapBlocked {
  */
 export type DeathCause = "home" | "wild" | "wiped";
 
-/** Payload for DIED: how the player died (the client adds their final power locally). */
+/** Payload for DIED: how the player died, the medals this defeat earned (0 for guests),
+ *  the peak power reached this run, and the name of whoever landed the kill (if anyone). */
 export interface Died {
   cause: DeathCause;
+  medals: number;
+  peak: number;
+  by?: string;
 }
 
 /** One actor in an arena event — name + skin color, so the feed can color the name. */

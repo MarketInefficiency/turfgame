@@ -26,6 +26,7 @@ import { Avatar, formatArmy } from "./avatar";
 import { Capital } from "./capital";
 import { TerritoryLayer } from "./territory";
 import { createInput, type InputHandle } from "./input";
+import * as shopCatalog from "../net/catalog";
 
 /** Grey shown for dead/abandoned land while it decays away. */
 const DECAY_COLOR = "#cdd2d8";
@@ -44,7 +45,15 @@ interface PlayerLike {
   alive: boolean;
   coverId: number;
   fighting: boolean;
+  attackers: number;
   immune: boolean;
+  skinId: string;
+  capSkin: string;
+  swordSkin: string;
+  cloakSkin: string;
+  hatSkin: string;
+  hairSkin: string;
+  shirtSkin: string;
   capCell: number;
   capPower: number;
   lastSeq: number;
@@ -57,6 +66,12 @@ export interface GameView {
   lastScore(): number;
   /** Flash a "Defeated…" banner at the top (cause + final power) before the start screen returns. */
   deathFlash(cause: DeathCause): void;
+  /** Death-match spectate: start watching a player by sessionId (null → first alive). */
+  spectate(id: string | null): void;
+  /** Death-match spectate: step to the next/previous alive player. */
+  spectateCycle(dir: 1 | -1): void;
+  /** The name of the player currently being spectated (empty if none). */
+  spectateName(): string;
 }
 
 /** A short-lived crumble effect spawned where an avatar died. */
@@ -86,10 +101,15 @@ export async function createGame(): Promise<GameView> {
     owner === DECAY_OWNER ? DECAY_COLOR : (colorByOwner.get(owner) ?? null),
   );
   world.addChild(territory.view);
+  const territoryGlowGfx = new Graphics(); // additive halo around all territory edges at night
+  territoryGlowGfx.blendMode = "add";
+  world.addChild(territoryGlowGfx);
   const foliageGfx = new Graphics(); // static terrain (trees/mountains) — built once on join
   world.addChild(foliageGfx);
   const foliage = new Uint8Array(GRID_SIZE);
-  const goldGfx = new Graphics(); // private owner-only outline (local player's land)
+  const enemyOutlineGfx = new Graphics(); // black border around every other player's land
+  world.addChild(enemyOutlineGfx);
+  const goldGfx = new Graphics(); // private owner-only outline (local player's land), on top
   world.addChild(goldGfx);
   const trailGfx = new Graphics();
   world.addChild(trailGfx);
@@ -121,6 +141,7 @@ export async function createGame(): Promise<GameView> {
   let capturePulse = 0; // 0..1, decays — pops the local avatar on a capture
   let gridReady = false; // first grid snapshot applied (avoids a spawn "wilderness" flash)
   let lastZoneOwner = -1; // owner of the cell we were last in, for the zone banner
+  let spectateId: string | null = null; // death-match: sessionId of the player we're watching
   let zoneAnim: Animation | null = null;
   // Intrusion alerts: per-other-player inside-my-territory state + a re-arm cooldown.
   const intruders = new Map<string, { inside: boolean; cooldown: number }>();
@@ -142,6 +163,16 @@ export async function createGame(): Promise<GameView> {
 
   function players(): Map<string, PlayerLike> | null {
     return (room?.state?.players as Map<string, PlayerLike> | undefined) ?? null;
+  }
+
+  /** Next alive player to spectate after `current` (wraps; null if nobody is alive). */
+  function nextSpectateId(current: string | null, dir = 1): string | null {
+    const ids = [...(players()?.keys() ?? [])];
+    if (ids.length === 0) return null;
+    if (current === null) return ids[0]!;
+    const i = ids.indexOf(current);
+    if (i < 0) return ids[0]!;
+    return ids[(i + dir + ids.length) % ids.length]!;
   }
 
   function onTick(ticker: Ticker): void {
@@ -178,17 +209,34 @@ export async function createGame(): Promise<GameView> {
     app.renderer.background.color = hexToNumber(lerpHex(CONFIG.DAY_BG, CONFIG.NIGHT_BG, nf));
     floorGfx.tint = hexToNumber(lerpHex(CONFIG.DAY_LINES, CONFIG.NIGHT_LINES, nf));
     const borderTint = hexToNumber(lerpHex(CONFIG.DAY_BORDER, CONFIG.NIGHT_BORDER, nf));
+    territoryGlowGfx.alpha = nf * 0.5; // territory edges radiate light only at night
 
     // --- Location-based zoom: survey view inside own land, standard in the wild ---
     const targetZoom = me?.stateTag === "HOME" ? CONFIG.ZOOM_HOME_MIN : CONFIG.ZOOM_WILD;
     zoom += (targetZoom - zoom) * (1 - Math.exp(-CONFIG.ZOOM_LERP * dt));
 
-    // --- Camera centers the local avatar ---
-    const cx = local.has ? local.x : CONFIG.MAP_WIDTH / 2;
-    const cy = local.has ? local.y : CONFIG.MAP_HEIGHT / 2;
+    // --- Camera centers the local avatar (or the spectated player when eliminated) ---
+    let cx = local.has ? local.x : CONFIG.MAP_WIDTH / 2;
+    let cy = local.has ? local.y : CONFIG.MAP_HEIGHT / 2;
+    if (!me && spectateId) {
+      if (!map.has(spectateId)) spectateId = nextSpectateId(spectateId); // target left/died → move on
+      const av = spectateId ? avatars.get(spectateId) : undefined;
+      if (av) {
+        cx = av.renderX;
+        cy = av.renderY;
+      }
+    }
     world.scale.set(zoom);
     world.position.set(app.screen.width / 2 - cx * zoom, app.screen.height / 2 - cy * zoom);
     const invZoom = 1 / zoom;
+    // Avatar on-screen scale blends with the camera: full in the wild, smaller in the home survey
+    // view. homeT is 1 at wild zoom, 0 at the most zoomed-out home view.
+    const homeT = Math.max(
+      0,
+      Math.min(1, (zoom - CONFIG.ZOOM_HOME_MIN) / (CONFIG.ZOOM_WILD - CONFIG.ZOOM_HOME_MIN)),
+    );
+    const avScreen =
+      CONFIG.AVATAR_SCALE_HOME + (CONFIG.AVATAR_SCALE_WILD - CONFIG.AVATAR_SCALE_HOME) * homeT;
 
     // --- Territory paint (only dirty chunks repaint) ---
     territory.redraw();
@@ -197,6 +245,8 @@ export async function createGame(): Promise<GameView> {
     const myOwner = me?.ownerId ?? -1;
     if (goldDirty || myOwner !== goldOwner) {
       territory.drawOwnerOutline(myOwner, goldGfx, CONFIG.GOLD_OUTLINE, 3);
+      territory.drawEnemyOutlines(myOwner, DECAY_OWNER, enemyOutlineGfx, CONFIG.ENEMY_OUTLINE, 2);
+      territory.drawBorderGlow(DECAY_OWNER, territoryGlowGfx, CONFIG.NIGHT_GLOW);
       goldDirty = false;
       goldOwner = myOwner;
     }
@@ -325,9 +375,24 @@ export async function createGame(): Promise<GameView> {
         avatarLayer.addChild(a.view);
       }
       a.setColor(p.color);
+      const skinItem = shopCatalog.byId("skin", p.skinId ?? "default"); // image/GIF skin?
+      const skinUrl = skinItem?.kind === "image" ? (skinItem.imageUrl ?? null) : null;
+      a.setSkin(skinUrl); // wraps the avatar circle
+      territory.setOwnerSkinUrl(p.ownerId, skinUrl); // paints their land with one masked copy of it
+      const swordItem = shopCatalog.byId("sword", p.swordSkin ?? "default"); // design + color + flare
+      // Procedural swords carry their length in `design` ("long"/"short"); design swords are long.
+      a.setSword(p.swordSkin ?? "default", swordItem?.color || CONFIG.SWORD_COLOR, swordItem?.design === "long");
+      a.setSwordFlare(swordItem?.flareUrl ?? null);
+      a.setAttackers(p.attackers ?? 0);
+      const cloakItem = shopCatalog.byId("cloak", p.cloakSkin ?? "default"); // design + recolour
+      a.setCloak(cloakItem?.design || p.cloakSkin || "default", cloakItem?.color ?? "");
+      a.setHair(p.hairSkin ?? "default");
+      a.setHat(p.hatSkin ?? "default");
+      a.setShirt(p.shirtSkin ?? "default");
       a.setArmy(p.army);
       a.setName(p.name);
       a.setBorderTint(borderTint);
+      a.setDayNight(nf);
       a.setCrown(rankById.get(id) ?? 0);
       a.setFighting(p.fighting);
       a.tickFx(dt);
@@ -338,11 +403,11 @@ export async function createGame(): Promise<GameView> {
         a.view.alpha += (targetAlpha - a.view.alpha) * (1 - Math.exp(-12 * dt));
       }
       if (isLocal && local.has) {
-        a.place(local.x, local.y, invZoom * (1 + 0.3 * capturePulse)); // capture pop
+        a.place(local.x, local.y, invZoom * avScreen * (1 + 0.3 * capturePulse)); // capture pop
       } else {
         a.renderX += (p.x - a.renderX) * rk;
         a.renderY += (p.y - a.renderY) * rk;
-        a.place(a.renderX, a.renderY, invZoom);
+        a.place(a.renderX, a.renderY, invZoom * avScreen);
       }
 
       // Capital (castle): always-visible landmark on the player's capital cell.
@@ -353,6 +418,7 @@ export async function createGame(): Promise<GameView> {
         capitalLayer.addChild(cap.view);
       }
       cap.setColor(p.color);
+      cap.setDesign(p.capSkin); // capital design cosmetic (same SVG the shop shows)
       cap.setPower(p.capPower);
       cap.place((cellX(p.capCell) + 0.5) * CONFIG.GRID_CELL, (cellY(p.capCell) + 0.5) * CONFIG.GRID_CELL);
 
@@ -566,7 +632,13 @@ export async function createGame(): Promise<GameView> {
     const skin = (p: PlayerLike): string => {
       const rank = rankById.get(p.id) ?? 0;
       const crown = rank >= 1 && rank <= 3 ? crownSvg(rank) : "";
-      return `<span class="combat-skin">${crown}<span class="combat-dot" style="background:${p.color}"></span></span>`;
+      const item = shopCatalog.byId("skin", p.skinId ?? "default");
+      // Image/GIF skins fill the dot with the art (GIFs animate as a CSS background); else flat colour.
+      const dotStyle =
+        item?.kind === "image" && item.imageUrl
+          ? `background-image:url('${item.imageUrl}');background-size:cover;background-position:center`
+          : `background:${p.color}`;
+      return `<span class="combat-skin">${crown}<span class="combat-dot" style="${dotStyle}"></span></span>`;
     };
     const foeRows = foes.map((p) => `<div class="combat-row">${skin(p)}<span class="combat-power">${formatArmy(p.army)}</span></div>`);
     const siegeRows = sieges.map(
@@ -641,12 +713,15 @@ export async function createGame(): Promise<GameView> {
     enter(r: Room): void {
       room = r;
       local.has = false;
+      spectateId = null;
       sendAccum = 0;
       zoom = CONFIG.ZOOM_WILD;
       capturePulse = 0;
       peakArmy = 0; // fresh run → reset the score
       goldOwner = -1;
       goldGfx.clear();
+      enemyOutlineGfx.clear();
+      territoryGlowGfx.clear();
       gridReady = false;
       lastZoneOwner = -1;
       intruders.clear();
@@ -689,6 +764,8 @@ export async function createGame(): Promise<GameView> {
       trails.clear();
       trailGfx.clear();
       goldGfx.clear();
+      enemyOutlineGfx.clear();
+      territoryGlowGfx.clear();
       foliageGfx.clear();
       foliage.fill(0);
       zoneAnim?.cancel();
@@ -706,9 +783,19 @@ export async function createGame(): Promise<GameView> {
       document.getElementById("combat-panel")?.classList.add("hidden");
       app.renderer.background.color = hexToNumber(CONFIG.DAY_BG); // reset for start screen
       local.has = false;
+      spectateId = null;
     },
     lastScore(): number {
       return peakArmy; // kept across leave() so the home screen can show the last run
+    },
+    spectate(id: string | null): void {
+      spectateId = id && players()?.has(id) ? id : nextSpectateId(null);
+    },
+    spectateCycle(dir: 1 | -1): void {
+      spectateId = nextSpectateId(spectateId, dir);
+    },
+    spectateName(): string {
+      return (spectateId && players()?.get(spectateId)?.name) || "";
     },
     deathFlash(cause: DeathCause): void {
       const el = document.getElementById("alert-banner");
@@ -719,7 +806,7 @@ export async function createGame(): Promise<GameView> {
           : cause === "wild"
             ? "Outfought in the open."
             : "Your army ran out.";
-      el.textContent = `Defeated. ${reason} Final power ${peakArmy.toLocaleString()}`;
+      el.textContent = `Defeated. ${reason} You peaked at ${peakArmy.toLocaleString()}.`;
       el.style.color = "#ff5a52";
       // Fade in and hold steady (no drift) — the start-screen fade right after covers its exit.
       alertAnim?.cancel();

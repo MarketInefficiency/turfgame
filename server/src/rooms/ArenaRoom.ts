@@ -15,21 +15,43 @@ import {
   stepMovement,
   worldToCellX,
   worldToCellY,
+  medalsForPower,
+  MEMBER_SWORD_ID,
   type ArenaEvent,
   type DeathCause,
   type Died,
+  type Eliminated,
   type InputPacket,
+  type LobbyMember,
+  type LobbyState,
+  type MatchEnd,
+  type PrivateOptions,
+  type RankRow,
 } from "@territory/shared";
 import { Player, RoomState } from "./schema.js";
+import { awardMedals, catalogAllows, catalogSkinColor, profileFromToken, type AccountProfile } from "../auth/supabase.js";
 import { ServerGrid } from "../grid.js";
 import { generateFoliage } from "../foliage.js";
-import { BotBrain, type BotOther, type Pt } from "../bots/brain.js";
+import { BotBrain, type BotCosmetics, type BotOther, type Pt } from "../bots/brain.js";
+import { rollBotCosmetics } from "../bots/cosmetics.js";
 import { BOT_NAMES } from "../bots/names.js";
 
 interface JoinOptions {
   name?: string;
   /** How the player entered: "random" | "specific" | "create" — drives AI population. */
   mode?: string;
+  /** Supabase access token if the player is signed in (validated server-side in onAuth). */
+  token?: string;
+  /** Present (with settings) only when a member is creating a private arena. */
+  private?: PrivateOptions;
+}
+
+/** A player waiting in a private-arena lobby: enough to spawn them when the host starts. */
+interface LobbyEntry {
+  name: string;
+  color: string;
+  acc: AccountProfile | null;
+  ready: boolean;
 }
 
 /** Latest input received from a client; applied by the authoritative tick. */
@@ -55,7 +77,7 @@ interface Trail {
  * deltas. Combat, enemy carving, and decay come in later milestones.
  */
 export class ArenaRoom extends Room<RoomState> {
-  maxClients = CONFIG.PLAYERS_PER_SHARD;
+  maxClients: number = CONFIG.PLAYERS_PER_SHARD;
 
   private readonly grid = new ServerGrid();
   private readonly foliage = generateFoliage(); // static per-arena concealment terrain
@@ -64,6 +86,8 @@ export class ArenaRoom extends Room<RoomState> {
   private readonly trails = new Map<string, Trail>();
   private readonly ownerIds = new Map<string, number>();
   private readonly ownerToId = new Map<number, string>(); // reverse: ownerId → sessionId
+  private readonly accountIds = new Map<string, string>(); // sessionId → Supabase user id (signed-in only)
+  private readonly peakPower = new Map<string, number>(); // sessionId → highest army this life (for medals)
   private freeOwnerIds: number[] = [];
   private nextOwnerId = 1;
 
@@ -101,8 +125,26 @@ export class ArenaRoom extends Room<RoomState> {
   private botFillAccum = 0;
   private botFillNext = 0;
 
-  onCreate(options: JoinOptions): void {
+  // Private arena state (all false/empty for normal public rooms).
+  private isPrivate = false;
+  private lobbyMode = false; // wait in a lobby for the host to start
+  private deathmatch = false; // last one standing, no respawn
+  private hostId = ""; // sessionId of the creator (the only one who can start it)
+  private readonly lobby = new Map<string, LobbyEntry>(); // waiting players, by sessionId
+  private matchStarted = false;
+  private startCount = 0; // how many spawned when the death match began (for the end check)
+  private readonly eliminated: RankRow[] = []; // death-match knockouts, in order of elimination
+
+  async onCreate(options: JoinOptions): Promise<void> {
     this.state = new RoomState();
+
+    this.onMessage(MSG.START_GAME, (client) => this.startMatch(client));
+    this.onMessage(MSG.LOBBY_READY, (client) => {
+      const entry = this.lobby.get(client.sessionId);
+      if (!entry) return;
+      entry.ready = !entry.ready;
+      this.broadcastLobby();
+    });
 
     this.onMessage(MSG.INPUT, (client, msg: InputPacket) => {
       const p = this.state.players.get(client.sessionId);
@@ -125,11 +167,32 @@ export class ArenaRoom extends Room<RoomState> {
     this.setSimulationInterval((dtMs) => this.update(dtMs), 1000 / CONFIG.TICK_RATE);
     console.log(`[arena] created ${this.roomId}`);
 
+    this.coverPts = this.computeCoverPts();
+    this.initNameBag();
+
+    // A member creating a private arena: members only (checked here so a crafted client can't host),
+    // a custom player cap, no AI fill, and excluded from matchmaking so it's reachable by code only.
+    const priv = options?.private;
+    if (priv) {
+      const host = await profileFromToken(options?.token);
+      if (!host?.member) throw new Error("Only members can host a private arena.");
+      this.isPrivate = true;
+      this.lobbyMode = Boolean(priv.lobby);
+      this.deathmatch = Boolean(priv.deathmatch);
+      const cap = Math.max(2, Math.min(50, Math.floor(Number(priv.maxPlayers) || 2)));
+      this.maxClients = cap;
+      this.state.maxPlayers = cap;
+      this.state.deathmatch = this.deathmatch;
+      this.state.phase = this.lobbyMode ? "lobby" : "live";
+      this.setPrivate(true);
+      console.log(`[arena] ${this.roomId} PRIVATE cap=${cap} lobby=${this.lobbyMode} deathmatch=${this.deathmatch}`);
+      return; // no bots in a private arena
+    }
+    this.state.maxPlayers = CONFIG.PLAYERS_PER_SHARD;
+
     // Populate the arena with AI players according to HOW it was created. A room is only
     // created via "random" (joinOrCreate found no open room) or "create" (new room);
     // "specific" joins never create, so they reach an already-populated room and add none.
-    this.coverPts = this.computeCoverPts();
-    this.initNameBag();
     if (options?.mode === "create") {
       // New arena: trickle players in over time until it holds 15–20.
       const span = CONFIG.BOT_CREATE_FILL_MAX - CONFIG.BOT_CREATE_FILL_MIN + 1;
@@ -173,14 +236,105 @@ export class ArenaRoom extends Room<RoomState> {
     return pts;
   }
 
+  /**
+   * Validate the player's account before they join. Signed-in players present a Supabase token;
+   * we verify it and attach their profile to client.auth. Guests (no/invalid token) get an empty
+   * object — onAuth must return something truthy or Colyseus rejects the join, and we never want
+   * to turn a guest away.
+   */
+  async onAuth(_client: Client, options: JoinOptions): Promise<AccountProfile | Record<string, never>> {
+    const profile = await profileFromToken(options?.token);
+    return profile ?? {};
+  }
+
   onJoin(client: Client, options: JoinOptions): void {
+    // A signed-in player with a claimed username uses it (server-trusted); otherwise the typed
+    // guest name, sanitized. client.auth was set by onAuth above.
+    const raw = client.auth as AccountProfile | Record<string, never> | undefined;
+    const acc = raw && "username" in raw ? (raw as AccountProfile) : null;
+    // The in-game name is whatever the player typed on the start screen, signed in or not — they can
+    // change it freely on any join. (sanitizeName falls back to a guest handle if it's empty.)
     const name = sanitizeName(options?.name);
-    const p = this.spawnEntity(client.sessionId, name, randomSkinColor());
-    // Keep the arena at its cap: a real arrival displaces a bot (smallest first), so
-    // rooms fill up with humans replacing AI until they're all real players.
-    this.enforcePlayerCap();
+    const entry: LobbyEntry = { name, color: catalogSkinColor(this.resolveSkin(acc)) ?? randomSkinColor(), acc, ready: false };
+
+    // The first player into a private arena is its host (the only one who can start it).
+    if (this.isPrivate && !this.hostId) {
+      this.hostId = client.sessionId;
+      this.state.hostId = client.sessionId;
+    }
+
+    // Lobby mode: collect waiting players and show everyone the roster — they don't spawn until the
+    // host starts the match.
+    if (this.isPrivate && this.lobbyMode && this.state.phase === "lobby") {
+      this.lobby.set(client.sessionId, entry);
+      this.broadcastLobby();
+      return;
+    }
+
+    // A late arrival into a death match that's already running just spectates (no respawn means no
+    // jumping into a fight in progress); the match-end ranking still reaches them.
+    if (this.isPrivate && this.deathmatch && this.matchStarted && this.state.phase === "live") {
+      client.send(MSG.ELIMINATED, { place: this.state.players.size + 1, total: this.startCount } satisfies Eliminated);
+      return;
+    }
+    if (this.state.phase === "ended") {
+      client.send(MSG.MATCH_END, { rankings: this.eliminated } satisfies MatchEnd);
+      return;
+    }
+
+    this.spawnFromEntry(client.sessionId, entry);
+    if (this.isPrivate && this.deathmatch && !this.lobbyMode) this.matchStarted = true; // immediate DM counts arrivals
+    if (this.isPrivate && this.deathmatch) this.startCount = Math.max(this.startCount, this.state.players.size);
+    console.log(`[arena] join ${client.sessionId} as "${name}" (${this.clients.length} humans, ${this.state.players.size} total)`);
+  }
+
+  /** The skin id an account would equip (default for guests), gated to owned items. */
+  private resolveSkin(acc: AccountProfile | null): string {
+    if (!acc) return "default";
+    const owned = new Set(acc.owned);
+    return catalogAllows("skin", acc.equippedSkin, owned) ? acc.equippedSkin : "default";
+  }
+
+  /** Spawn a (deferred or immediate) player with their account's owned cosmetics applied. */
+  private spawnFromEntry(sessionId: string, entry: LobbyEntry): void {
+    const acc = entry.acc;
+    const owned = new Set(acc?.owned ?? []);
+    const allow = (type: string, id: string | undefined): string =>
+      acc && id && catalogAllows(type, id, owned) ? id : "default";
+    const p = this.spawnEntity(sessionId, entry.name, entry.color);
+    p.skinId = allow("skin", acc?.equippedSkin);
+    p.capSkin = allow("capital", acc?.equippedCapital);
+    // The members-only sword is never "owned" — it's allowed only while the account is an active member.
+    p.swordSkin =
+      acc?.equippedSword === MEMBER_SWORD_ID ? (acc?.member ? MEMBER_SWORD_ID : "default") : allow("sword", acc?.equippedSword);
+    p.cloakSkin = allow("cloak", acc?.equippedCloak);
+    p.hatSkin = allow("hat", acc?.equippedHat);
+    p.hairSkin = allow("hair", acc?.equippedHair);
+    p.shirtSkin = allow("shirt", acc?.equippedShirt);
+    if (acc?.userId) this.accountIds.set(sessionId, acc.userId); // earns medals on defeat
+    this.peakPower.set(sessionId, p.army);
+    this.enforcePlayerCap(); // public rooms displace a bot; private rooms have none to evict
     this.announceJoin(p.name, p.color);
-    console.log(`[arena] join ${client.sessionId} as "${name}" #${p.ownerId} (${this.clients.length} humans, ${this.state.players.size} total)`);
+  }
+
+  /** Host-only: spawn everyone in the lobby and flip the arena live. */
+  private startMatch(client: Client): void {
+    if (client.sessionId !== this.hostId || this.state.phase !== "lobby") return;
+    for (const [sid, entry] of this.lobby) this.spawnFromEntry(sid, entry);
+    this.startCount = this.lobby.size;
+    this.lobby.clear();
+    this.matchStarted = true;
+    this.state.phase = "live";
+    console.log(`[arena] ${this.roomId} match started with ${this.startCount} players`);
+  }
+
+  /** Push the current lobby roster (with the host flagged) to everyone waiting. */
+  private broadcastLobby(): void {
+    const players: LobbyMember[] = [];
+    for (const [sid, entry] of this.lobby) {
+      players.push({ name: entry.name, color: entry.color, host: sid === this.hostId, ready: entry.ready });
+    }
+    this.broadcast(MSG.LOBBY, { players } satisfies LobbyState);
   }
 
   /** Evict AI players (smallest first) until the arena is back within PLAYERS_PER_SHARD. */
@@ -293,6 +447,7 @@ export class ArenaRoom extends Room<RoomState> {
     const name = this.nameBag.pop() ?? `guest${this.nextBotNum}`;
     const color = randomSkinColor();
     const brain = new BotBrain(id, name, color);
+    brain.cosmetics = rollBotCosmetics(); // ~20% of bots show off real cosmetics; null otherwise
     this.bots.set(id, brain);
     const turfCells = established
       ? CONFIG.BOT_ESTABLISHED_ARMY_MIN +
@@ -300,7 +455,8 @@ export class ArenaRoom extends Room<RoomState> {
       : 0; // 0 → tiny starter disc, like a fresh arrival
     // Established (creation-time) bots are the pre-existing population → no spawn blink;
     // trickle arrivals are new, so they get protection.
-    this.spawnEntity(id, name, color, turfCells, !established);
+    const p = this.spawnEntity(id, name, color, turfCells, !established);
+    applyBotCosmetics(p, brain.cosmetics);
     if (announce) this.announceJoin(name, color); // trickle arrivals show up in the feed
   }
 
@@ -330,7 +486,7 @@ export class ArenaRoom extends Room<RoomState> {
       if (p.alive) {
         others.push({
           x: p.x, y: p.y, army: p.army, ownerId: p.ownerId,
-          capCell: p.capCell, capPower: p.capPower, immune: p.immune,
+          capCell: p.capCell, capPower: p.capPower, immune: p.immune, coverId: p.coverId,
         });
       }
     });
@@ -349,7 +505,8 @@ export class ArenaRoom extends Room<RoomState> {
           } else {
             brain.dead = false;
             brain.reset();
-            this.spawnEntity(brain.id, brain.name, brain.color); // "rejoins" small, same name
+            // "Rejoins" small with the same name and the same look (a returning player keeps their kit).
+            applyBotCosmetics(this.spawnEntity(brain.id, brain.name, brain.color), brain.cosmetics);
           }
         }
         continue;
@@ -359,7 +516,7 @@ export class ArenaRoom extends Room<RoomState> {
       if (!p || ownerId === undefined || !p.alive) continue;
       const out = brain.think(
         {
-          self: { x: p.x, y: p.y, army: p.army, ownerId, stateTag: p.stateTag, capPower: p.capPower },
+          self: { x: p.x, y: p.y, army: p.army, ownerId, stateTag: p.stateTag, capPower: p.capPower, coverId: p.coverId },
           others,
           cells: this.grid.cells,
           topIds,
@@ -372,6 +529,14 @@ export class ArenaRoom extends Room<RoomState> {
   }
 
   onLeave(client: Client): void {
+    // A player waiting in the lobby just drops out of the roster (they never spawned).
+    if (this.lobby.delete(client.sessionId)) {
+      if (client.sessionId === this.hostId) this.reassignHost();
+      this.broadcastLobby();
+      console.log(`[arena] lobby leave ${client.sessionId} (${this.lobby.size} waiting)`);
+      return;
+    }
+
     // If the player was already killed, their land is decaying and id freed already.
     const ownerId = this.ownerIds.get(client.sessionId);
     if (ownerId !== undefined) {
@@ -379,6 +544,7 @@ export class ArenaRoom extends Room<RoomState> {
       this.freeOwnerIds.push(ownerId);
       this.ownerToId.delete(ownerId);
     }
+    const wasPlaying = this.state.players.has(client.sessionId);
     this.state.players.delete(client.sessionId);
     this.inputs.delete(client.sessionId);
     this.trails.delete(client.sessionId);
@@ -387,7 +553,20 @@ export class ArenaRoom extends Room<RoomState> {
     this.overgrowthDebt.delete(client.sessionId);
     this.immuneUntil.delete(client.sessionId);
     this.capFloat.delete(client.sessionId);
+    this.accountIds.delete(client.sessionId);
+    this.peakPower.delete(client.sessionId);
+    // A live death-match player quitting counts them out; the match can end if one (or none) remain.
+    if (wasPlaying && this.deathmatch && this.matchStarted && this.state.phase === "live" && this.startCount >= 2 && this.state.players.size <= 1) {
+      this.endMatch();
+    }
     console.log(`[arena] leave ${client.sessionId} (${this.clients.length}/${this.maxClients})`);
+  }
+
+  /** Hand a private arena's host role to whoever's next in the lobby (else leave it empty). */
+  private reassignHost(): void {
+    const next = this.lobby.keys().next().value as string | undefined;
+    this.hostId = next ?? "";
+    this.state.hostId = this.hostId;
   }
 
   /** Kill a player: their land starts decaying and they're sent back to the start screen. */
@@ -396,10 +575,14 @@ export class ArenaRoom extends Room<RoomState> {
     if (!p || !p.alive) return;
 
     // Announce the kill to the news feed (both players still exist here for their colors).
+    let killerName: string | undefined;
+    let killerSession: string | undefined;
     if (killer) {
       const killerId = this.ownerToId.get(killer.ownerId);
       const kp = killerId !== undefined ? this.state.players.get(killerId) : undefined;
       if (kp && killerId !== id) {
+        killerName = kp.name;
+        killerSession = killerId;
         this.broadcast(MSG.EVENT, {
           kind: killer.kind,
           a: { name: kp.name, color: kp.color },
@@ -424,11 +607,30 @@ export class ArenaRoom extends Room<RoomState> {
     this.immuneUntil.delete(id);
     this.capFloat.delete(id);
 
-    // Tell the (human) victim how they fell, so the client can show a defeat banner before the
-    // start screen returns. killHome = killed on enemy soil, killWild = lost a wild skirmish,
-    // anything else (e.g. decayed to nothing) = a plain wipe.
+    // Award medals for the run, scaled to the peak power reached (signed-in players only).
+    const peak = this.peakPower.get(id) ?? 0;
+    this.peakPower.delete(id);
+    const userId = this.accountIds.get(id);
+    const medals = userId ? medalsForPower(peak) : 0;
+    if (userId && medals > 0) void awardMedals(userId, medals, "earn");
+
+    if (this.deathmatch && this.matchStarted) {
+      // Last one standing: record the knockout, tell them to spectate (no DIED, so the client shows
+      // the spectator view instead of the respawn screen), and end the match when one (or none) remain.
+      const place = Math.max(1, this.startCount - this.eliminated.length);
+      this.eliminated.push({ place, name: p.name, color: p.color, peak });
+      this.clients.find((c) => c.sessionId === id)?.send(MSG.ELIMINATED, { place, total: this.startCount, byId: killerSession } satisfies Eliminated);
+      this.state.players.delete(id);
+      if (this.startCount >= 2 && this.state.players.size <= 1) this.endMatch();
+      console.log(`[arena] eliminated ${id} (place ${place})`);
+      return;
+    }
+
+    // Tell the (human) victim how they fell + what they earned, so the client can show a defeat
+    // banner before the start screen returns. killHome = killed on enemy soil, killWild = lost a
+    // wild skirmish, anything else (e.g. decayed to nothing) = a plain wipe.
     const cause: DeathCause = killer?.kind === "killHome" ? "home" : killer?.kind === "killWild" ? "wild" : "wiped";
-    this.clients.find((c) => c.sessionId === id)?.send(MSG.DIED, { cause } satisfies Died);
+    this.clients.find((c) => c.sessionId === id)?.send(MSG.DIED, { cause, medals, peak, by: killerName } satisfies Died);
     this.state.players.delete(id);
 
     // A downed bot doesn't disappear — it waits a human-like beat then "rejoins" small
@@ -439,6 +641,25 @@ export class ArenaRoom extends Room<RoomState> {
       brain.respawnIn = CONFIG.BOT_RESPAWN_MIN + Math.random() * (CONFIG.BOT_RESPAWN_MAX - CONFIG.BOT_RESPAWN_MIN);
     }
     console.log(`[arena] death ${id}`);
+  }
+
+  /** Finish a death match: rank the survivor first, then knockouts by reverse elimination, and
+   *  broadcast the standings. The arena goes "ended" and disposes once everyone leaves. */
+  private endMatch(): void {
+    if (this.state.phase === "ended") return;
+    const survivor = this.state.players.values().next().value as Player | undefined;
+    const rankings: RankRow[] = [];
+    if (survivor) {
+      const peak = Math.max(survivor.army, this.peakPower.get(survivor.id) ?? 0);
+      rankings.push({ place: 1, name: survivor.name, color: survivor.color, peak });
+    }
+    rankings.push(...this.eliminated);
+    rankings.sort((a, b) => a.place - b.place);
+    this.state.phase = "ended";
+    this.eliminated.length = 0;
+    this.eliminated.push(...rankings); // keep the final table around for anyone who joins after
+    this.broadcast(MSG.MATCH_END, { rankings } satisfies MatchEnd);
+    console.log(`[arena] ${this.roomId} match ended, winner ${survivor?.name ?? "(none)"}`);
   }
 
   /** Turn an owner's whole kingdom to rubble (grey); the tick drains it into the decay queue. */
@@ -613,6 +834,9 @@ export class ArenaRoom extends Room<RoomState> {
         const rate = CONFIG.CAP_DECAY_C * Math.pow(p.capPower - CONFIG.CAP_DECAY_THRESHOLD, CONFIG.CAP_DECAY_EXP);
         this.addCapPower(id, -rate * dt);
       }
+
+      // Track the highest army this life — medals on defeat scale to it.
+      if (p.army > (this.peakPower.get(id) ?? 0)) this.peakPower.set(id, p.army);
     });
 
     this.resolveInteractions(dt);
@@ -741,6 +965,9 @@ export class ArenaRoom extends Room<RoomState> {
         }
       }
     }
+
+    // Record how many foes are draining each player (drives the client's ganged sword-spin effect).
+    for (const a of list) a.p.attackers = foes.get(a.id)?.size ?? 0;
 
     // Apply wilderness drain by shedding frontier cells; zero army ⇒ death.
     const dropPerSec = CONFIG.DRAIN_RATE * dt;
@@ -925,12 +1152,24 @@ const NAME_BLOCK = [
   "cumshot", "blowjob", "handjob", "negro",
 ];
 
+/** Paint a bot's rolled cosmetics onto its spawned player (no-op for plain bots). */
+function applyBotCosmetics(p: Player, c: BotCosmetics | null): void {
+  if (!c) return;
+  p.skinId = c.skinId;
+  p.capSkin = c.capSkin;
+  p.swordSkin = c.swordSkin;
+  p.cloakSkin = c.cloakSkin;
+  p.hatSkin = c.hatSkin;
+  p.hairSkin = c.hairSkin;
+  p.shirtSkin = c.shirtSkin;
+}
+
 /** Trim to a safe display name (protocol.md §4) and scrub slurs/profanity from user input. */
 function sanitizeName(raw?: string): string {
   const cleaned = (raw ?? "")
     .replace(/[^\p{L}\p{N} _-]/gu, "")
     .trim()
-    .slice(0, 8);
+    .slice(0, 16);
   if (!cleaned) return "guest";
   // Normalize for matching: lowercase, fold common leetspeak, drop everything but letters.
   const norm = cleaned

@@ -1,22 +1,61 @@
-import { Container, Graphics, Text } from "pixi.js";
-import { CONFIG, hexToNumber, lerpHex } from "@territory/shared";
+import { Container, Graphics, Sprite, Text, Texture } from "pixi.js";
+import { CONFIG, castleSvg, hexToNumber } from "@territory/shared";
 import { formatArmy } from "./avatar";
 
 /**
- * A player's capital: a small, crenellated stone castle drawn in world space on the
- * capital cell, with the owner's color as a pennant and the power-point number printed
- * underneath. Heavily outlined so it stays readable on any territory color / floor.
+ * A player's capital: a castle drawn in world space on the capital cell, with the owner's colour
+ * as a pennant and the power-point number printed underneath.
+ *
+ * The castle is a browser-RASTERIZED SVG (a Sprite), not Pixi's Graphics.svg. Graphics.svg
+ * tessellates the strokes and left visible line artifacts in-game; rasterizing the exact same SVG
+ * the shop renders inline makes the in-game capital crisp, static, and identical to the preview.
  */
+const CASTLE_W = 40; // on-screen width every design is normalized to (world px)
+const CASTLE_H = (CASTLE_W * 43) / 48; // keep the SVG's 48x43 viewBox aspect
+const BASE_Y = 14; // castle base sits here; the power label hangs just below
+const RASTER = 6; // supersample factor so the castle stays sharp when zoomed in
+
+// Each design rasterized once (shared across all capitals wearing it).
+const castleTexCache = new Map<string, Promise<Texture>>();
+function loadCastleTexture(id: string): Promise<Texture> {
+  let p = castleTexCache.get(id);
+  if (!p) {
+    // Give the SVG explicit pixel dimensions so the browser rasterizes it at high resolution.
+    const svg = castleSvg(id).replace("<svg ", `<svg width="${48 * RASTER}" height="${43 * RASTER}" `);
+    const url = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+    p = new Promise<Texture>((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(Texture.from(img));
+      img.onerror = reject;
+      img.src = url;
+    });
+    castleTexCache.set(id, p);
+  }
+  return p;
+}
+
 export class Capital {
   readonly view = new Container();
-  private readonly castle = new Graphics();
-  private readonly flag = new Graphics(); // drawn white, tinted to the owner's color
+  private readonly castle = new Sprite();
+  private readonly flag = new Graphics(); // pennant, drawn white and tinted to the owner's colour
   private readonly label: Text;
   private color = "";
+  private design = "";
   private power = -1;
 
   constructor() {
-    this.build();
+    // Bottom-centre anchor so the castle base lands exactly on BASE_Y for every design.
+    this.castle.anchor.set(0.5, 1);
+    this.castle.position.set(0, BASE_Y);
+
+    // Pennant authored from its own top-left (0,0); pokes from the castle top.
+    this.flag
+      .poly([0, 0, 11, 2.6, 0, 5.2])
+      .fill(0xffffff)
+      .stroke({ width: 1.4, color: hexToNumber(CONFIG.CAPITAL_EDGE) });
+    this.flag.position.set(0, BASE_Y - CASTLE_H);
+    this.setDesign("default");
+
     this.label = new Text({
       text: "0",
       style: {
@@ -33,34 +72,24 @@ export class Capital {
     this.view.addChild(this.castle, this.flag, this.label);
   }
 
-  private build(): void {
-    const stone = hexToNumber(CONFIG.CAPITAL_COLOR);
-    const edge = hexToNumber(CONFIG.CAPITAL_EDGE);
-    const dark = hexToNumber(lerpHex(CONFIG.CAPITAL_COLOR, "#000000", 0.55)); // gate + windows
-    const ow = 2;
-    const g = this.castle;
-    const merlon = (x: number, y: number): Graphics =>
-      g.rect(x, y, 4, 4).fill(stone).stroke({ width: ow, color: edge });
-
-    // Masses: outer wall, two side towers, taller central keep.
-    g.rect(-18, 2, 36, 12).fill(stone).stroke({ width: ow, color: edge });
-    g.rect(-20, -5, 10, 19).fill(stone).stroke({ width: ow, color: edge });
-    g.rect(10, -5, 10, 19).fill(stone).stroke({ width: ow, color: edge });
-    g.rect(-7, -11, 14, 25).fill(stone).stroke({ width: ow, color: edge });
-    // Battlements along the tops.
-    merlon(-20, -9); merlon(-14, -9);
-    merlon(10, -9); merlon(16, -9);
-    merlon(-7, -15); merlon(-2, -15); merlon(3, -15);
-    // Gate and arrow-slit windows.
-    g.roundRect(-4, 5, 8, 9, 2).fill(dark);
-    g.rect(-13, -1, 2.5, 4).fill(dark);
-    g.rect(10.5, -1, 2.5, 4).fill(dark);
-    g.rect(-1.2, -6, 2.4, 4).fill(dark);
-    // Flag pole rising from the keep.
-    g.rect(-0.6, -22, 1.2, 7).fill(edge);
-
-    // Pennant (white → tinted to the owner's color per-instance).
-    this.flag.poly([0, -22, 11, -19.5, 0, -16.5]).fill(0xffffff).stroke({ width: 1.4, color: edge });
+  /** Render a castle design (cosmetic) from its rasterized texture, sized to CASTLE_W. */
+  setDesign(id: string): void {
+    if (id === this.design) return;
+    this.design = id;
+    void loadCastleTexture(id)
+      .then((tex) => {
+        if (this.design !== id || this.castle.destroyed) return; // design changed / capital gone
+        this.castle.texture = tex;
+        this.castle.width = CASTLE_W;
+        this.castle.height = CASTLE_H;
+      })
+      .catch(() => {
+        if (this.castle.destroyed) return; // parse/raster failure → plain tinted block, never empty
+        this.castle.texture = Texture.WHITE;
+        this.castle.width = CASTLE_W;
+        this.castle.height = CASTLE_H;
+        this.castle.tint = hexToNumber(CONFIG.CAPITAL_COLOR);
+      });
   }
 
   setColor(hex: string): void {

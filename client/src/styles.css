@@ -177,7 +177,9 @@ body {
   color: rgba(255, 255, 255, 0.5);
 }
 
-input[type="text"] {
+input[type="text"],
+input[type="email"],
+input[type="password"] {
   width: 100%;
   padding: 12px 13px;
   font-size: 15px;
@@ -188,10 +190,14 @@ input[type="text"] {
   outline: none;
   transition: border-color 120ms ease, box-shadow 120ms ease;
 }
-input[type="text"]::placeholder {
+input[type="text"]::placeholder,
+input[type="email"]::placeholder,
+input[type="password"]::placeholder {
   color: rgba(255, 255, 255, 0.35);
 }
-input[type="text"]:focus {
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus {
   border-color: #4ade80;
   box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.2);
 }
@@ -324,6 +330,1521 @@ input[type="text"].room-code {
 .kofi-game.hidden {
   opacity: 0;
   pointer-events: none;
+}
+
+/* --- Account chip (home, top-right) + auth dialog --- */
+.account-chip {
+  position: absolute;
+  top: 18px;
+  right: 20px;
+  z-index: 3;
+  max-width: 46vw;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 999px;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: border-color 120ms ease, color 120ms ease;
+}
+.account-chip:hover {
+  border-color: var(--turf);
+  color: var(--turf);
+}
+.auth-overlay {
+  z-index: 20;
+  background: rgba(8, 12, 20, 0.55);
+}
+/* Toggled by setVisible: show only the form OR the Sign out button, never both. */
+#auth-signedout.hidden,
+#auth-signedin.hidden {
+  display: none;
+}
+.auth-card {
+  position: relative;
+  width: min(92vw, 380px);
+  padding: 26px 26px 18px;
+  background: rgba(17, 24, 39, 0.92);
+  border: 1px solid var(--glass-border);
+  border-radius: 18px;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+.auth-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.auth-close:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+}
+.auth-title {
+  margin: 0 0 4px;
+  font-size: 22px;
+  color: #fff;
+}
+.auth-sub {
+  margin: 0 0 16px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+.auth-btn {
+  margin-top: 4px;
+}
+.auth-secondary {
+  width: 100%;
+  margin-top: 10px;
+  padding: 11px 14px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--glass-border);
+  border-radius: 11px;
+  cursor: pointer;
+  transition: border-color 120ms ease, color 120ms ease;
+}
+.auth-secondary:hover {
+  border-color: var(--turf);
+  color: var(--turf);
+}
+.auth-secondary:disabled {
+  opacity: 0.5;
+  cursor: default;
+  border-color: var(--glass-border);
+  color: var(--text-muted);
+}
+/* --- Death / run summary --- */
+.death-overlay {
+  background: rgba(8, 12, 20, 0.55);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+}
+.death-card {
+  width: min(92vw, 360px);
+  padding: 24px 24px 18px;
+  text-align: center;
+  background: rgba(17, 24, 39, 0.94);
+  border: 1px solid var(--glass-border);
+  border-radius: 18px;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.55);
+  transform: translateY(10px) scale(0.98);
+  transition: transform 260ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.death-overlay:not(.hidden) .death-card {
+  transform: translateY(0) scale(1);
+}
+.death-reward.hidden,
+.death-guest.hidden,
+.ds-badge.hidden {
+  display: none;
+}
+.death-title {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: 0.3px;
+}
+.death-cause {
+  margin: 6px 0 18px;
+  font-size: 13.5px;
+  color: var(--text-muted);
+}
+.death-stats {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.ds-cell {
+  position: relative;
+  flex: 1;
+  padding: 12px 6px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+}
+.ds-val {
+  display: block;
+  font-size: 19px;
+  font-weight: 800;
+  color: #fff;
+}
+.ds-label {
+  display: block;
+  margin-top: 2px;
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--text-muted);
+}
+.ds-badge {
+  position: absolute;
+  left: 50%;
+  bottom: -9px;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  padding: 2px 8px;
+  font-size: 9.5px;
+  font-weight: 700;
+  color: #0c0f14;
+  background: var(--turf);
+  border-radius: 999px;
+}
+.death-reward {
+  margin-bottom: 16px;
+  padding: 14px;
+  background: rgba(74, 222, 128, 0.08);
+  border: 1px solid rgba(74, 222, 128, 0.25);
+  border-radius: 13px;
+}
+.dr-label {
+  display: block;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--text-muted);
+}
+.dr-amount {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--turf);
+}
+.dr-amount .medal-ico svg {
+  width: 22px;
+  height: 22px;
+  vertical-align: middle;
+}
+.dr-balance {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.death-guest {
+  margin-bottom: 16px;
+  padding: 14px;
+  background: rgba(96, 165, 250, 0.08);
+  border: 1px solid rgba(96, 165, 250, 0.28);
+  border-radius: 13px;
+}
+.dg-text {
+  margin: 0 0 10px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text);
+}
+.death-guest .auth-secondary {
+  margin-top: 0;
+}
+.death-respawn {
+  width: 100%;
+}
+.death-home {
+  width: 100%;
+  margin-top: 8px;
+  padding: 9px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: color 120ms ease, background 120ms ease;
+}
+.death-home:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.06);
+}
+/* Short landscape phones: scroll the whole overlay (top-aligned) and compact the card so the
+   buttons never fall off the bottom of the screen. */
+@media (max-height: 540px) {
+  .death-overlay {
+    align-items: flex-start;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 8px 0 28px;
+  }
+  .death-card {
+    margin: auto;
+    padding: 14px 18px 12px;
+  }
+  .death-title {
+    font-size: 20px;
+  }
+  .death-cause {
+    margin: 3px 0 11px;
+  }
+  .death-stats {
+    gap: 8px;
+    margin-bottom: 11px;
+  }
+  .ds-cell {
+    padding: 8px 5px;
+  }
+  .ds-val {
+    font-size: 16px;
+  }
+  .death-reward,
+  .death-guest {
+    margin-bottom: 11px;
+    padding: 10px 12px;
+  }
+  .dr-amount {
+    font-size: 23px;
+  }
+  .dg-text {
+    margin-bottom: 8px;
+    font-size: 12px;
+  }
+  .death-home {
+    margin-top: 6px;
+  }
+}
+
+/* --- Create a private arena button + config --- */
+.create-private {
+  margin-top: 8px;
+  border-color: rgba(247, 211, 60, 0.5);
+  color: #f7d36c;
+}
+.create-private:hover {
+  border-color: #f7d36c;
+  color: #fff;
+}
+/* On-theme number stepper (used for the private-arena player count) */
+.stepper {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+}
+.step-btn {
+  flex: 0 0 46px;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--glass-border);
+  border-radius: 11px;
+  cursor: pointer;
+  transition: border-color 120ms ease, background 120ms ease;
+}
+.step-btn:hover {
+  border-color: var(--turf);
+  background: rgba(74, 222, 128, 0.12);
+}
+.step-btn:active {
+  background: rgba(74, 222, 128, 0.2);
+}
+input[type="text"].step-input {
+  flex: 1;
+  text-align: center;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  padding: 12px 8px;
+}
+
+.opt-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 12px 0;
+}
+.opt-text {
+  flex: 1;
+}
+.opt-title {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+}
+.opt-sub {
+  display: block;
+  margin-top: 2px;
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--text-muted);
+}
+.toggle {
+  flex: 0 0 auto;
+  width: 44px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid var(--glass-border);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+  transition: background 140ms ease;
+}
+.toggle span {
+  display: block;
+  width: 20px;
+  height: 20px;
+  margin: 2px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 140ms ease;
+}
+.toggle.on {
+  background: var(--turf);
+}
+.toggle.on span {
+  transform: translateX(18px);
+}
+
+/* --- Lobby --- */
+.lobby-code {
+  display: block;
+  width: 100%;
+  margin: 0 0 8px;
+  padding: 10px;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px dashed var(--glass-border);
+  border-radius: 11px;
+  cursor: pointer;
+}
+.lobby-code:hover {
+  border-color: var(--turf);
+}
+.lobby-list {
+  max-height: 38vh;
+  overflow-y: auto;
+  margin: 12px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.lobby-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  font-size: 14px;
+  color: var(--text);
+}
+.lobby-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+}
+.lobby-host {
+  margin-left: auto;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: #f7d36c;
+}
+.lobby-ready-tag {
+  margin-left: auto;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--turf);
+}
+.lobby-waiting-tag {
+  margin-left: auto;
+  font-size: 10px;
+  letter-spacing: 0.4px;
+  color: var(--text-muted);
+}
+.lobby-ready {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+  box-shadow: none;
+}
+.lobby-ready.ready {
+  background: var(--turf);
+  color: #0c1a10;
+}
+.lobby-wait {
+  margin: 6px 0 0;
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+/* These toggle via setVisible, which adds .hidden — give them a real hide rule. */
+#lobby-start.hidden,
+#lobby-ready.hidden,
+.lobby-wait.hidden {
+  display: none;
+}
+
+/* --- Death-match standings --- */
+.rank-list {
+  max-height: 50vh;
+  overflow-y: auto;
+  margin-bottom: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.rank-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  text-align: left;
+}
+.rank-row.you {
+  background: rgba(74, 222, 128, 0.12);
+  border: 1px solid rgba(74, 222, 128, 0.35);
+}
+.rank-place {
+  width: 26px;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--text-muted);
+}
+.rank-row.win .rank-place {
+  color: #f7d36c;
+}
+.rank-dot {
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+}
+.rank-name {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+}
+.rank-peak {
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+
+/* --- Spectator banner --- */
+.spectate-banner {
+  position: fixed;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  background: rgba(17, 24, 39, 0.82);
+  border: 1px solid var(--glass-border);
+  border-radius: 999px;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+.spectate-banner.hidden {
+  display: none;
+}
+
+/* Spectator control bar: cycle through the remaining players to watch. */
+.spectate-bar {
+  position: fixed;
+  bottom: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 10px;
+  background: rgba(17, 24, 39, 0.85);
+  border: 1px solid var(--glass-border);
+  border-radius: 999px;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+.spectate-bar.hidden {
+  display: none;
+}
+.sb-arrow {
+  width: 34px;
+  height: 34px;
+  font-size: 13px;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--glass-border);
+  border-radius: 50%;
+  cursor: pointer;
+  transition: border-color 120ms ease, color 120ms ease;
+}
+.sb-arrow:hover {
+  border-color: var(--turf);
+  color: var(--turf);
+}
+.sb-label {
+  min-width: 120px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.sb-label #spectate-name {
+  font-weight: 700;
+  color: #fff;
+}
+
+/* Social sign-in placeholders */
+.social-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  width: 100%;
+  margin-bottom: 9px;
+  padding: 11px 14px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--glass-border);
+  border-radius: 11px;
+  cursor: pointer;
+}
+.social-btn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.social-ico {
+  width: 18px;
+  height: 18px;
+  flex: none;
+}
+.soon-tag {
+  margin-left: 2px;
+  padding: 1px 6px;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #fbbf24;
+  background: rgba(251, 191, 36, 0.14);
+  border-radius: 999px;
+}
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 12px 0;
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.auth-divider::before,
+.auth-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--glass-border);
+}
+.pw-wrap {
+  position: relative;
+  display: block;
+}
+.pw-wrap input {
+  padding-right: 58px;
+}
+.pw-toggle {
+  position: absolute;
+  right: 7px;
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.pw-toggle:hover {
+  color: #fff;
+}
+.auth-links {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 12px;
+}
+.link-btn {
+  padding: 2px 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--turf);
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+.link-btn:hover {
+  text-decoration: underline;
+}
+
+.auth-who {
+  margin: 0 0 14px;
+  font-size: 14px;
+  color: var(--text);
+}
+.auth-who span {
+  font-weight: 700;
+}
+.auth-msg {
+  min-height: 16px;
+  margin: 12px 2px 0;
+  font-size: 13px;
+  text-align: center;
+  color: #ff8a80;
+}
+.auth-msg.ok {
+  color: var(--turf);
+}
+
+/* --- Shop dialog --- */
+.shop-chip {
+  left: 20px;
+  right: auto; /* mirror the account chip into the top-left corner */
+  color: var(--turf);
+  border-color: rgba(74, 222, 128, 0.45);
+}
+.shop-chip:hover {
+  color: #fff;
+  background: rgba(74, 222, 128, 0.16);
+  border-color: var(--turf);
+}
+/* Top-left cluster: the Shop chip + the medal balance to its right. */
+.home-topleft {
+  position: absolute;
+  top: 18px;
+  left: 20px;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.home-topleft .account-chip {
+  position: static; /* flow inside the cluster instead of in the absolute corners */
+  top: auto;
+  right: auto;
+  left: auto;
+}
+/* Medal balance: icon + count + the same green plus as the in-shop counter */
+.home-medals {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #f4cf6a;
+}
+.home-medals .medal-ico svg {
+  width: 17px;
+  height: 17px;
+  display: block;
+}
+.home-medal-count {
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.home-medals.ping {
+  animation: medalPing 0.5s ease;
+}
+@keyframes medalPing {
+  0% {
+    transform: scale(1);
+  }
+  45% {
+    transform: scale(1.22);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+/* The "+N" medal that flies into the counter after a defeat */
+.medal-fly {
+  position: fixed;
+  z-index: 60;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 20px;
+  font-weight: 800;
+  color: #f4cf6a;
+  pointer-events: none;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.55);
+}
+.medal-fly svg {
+  width: 26px;
+  height: 26px;
+}
+.shop-card {
+  width: min(94vw, 460px);
+}
+/* Shop / Owned tabs */
+.shop-tabs {
+  display: flex;
+  gap: 6px;
+  margin: 2px 0 4px;
+  padding: 3px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--glass-border);
+  border-radius: 11px;
+}
+.shop-tab {
+  flex: 1;
+  padding: 7px 10px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: color 120ms ease, background 120ms ease;
+}
+.shop-tab:hover {
+  color: var(--text);
+}
+.shop-tab.active {
+  color: #06281a;
+  background: linear-gradient(180deg, #5de29a, #36c46e);
+}
+.shop-list {
+  max-height: 50vh;
+  overflow-y: auto;
+  margin-top: 6px;
+}
+.cz-group {
+  margin-bottom: 12px;
+}
+.cz-group-title {
+  margin: 6px 2px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.cz-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.cz-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 6px 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+}
+.cz-card.on {
+  border-color: var(--turf);
+  background: rgba(74, 222, 128, 0.08);
+}
+.cz-badge {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  padding: 1px 6px;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border-radius: 999px;
+}
+.cz-badge.premium {
+  color: #2a1c00;
+  background: #fbbf24;
+}
+.cz-badge.owned {
+  color: #06281a;
+  background: #5de29a;
+}
+.cz-badge.member {
+  color: #1a1206;
+  background: #d9b24c;
+}
+.cz-thumb {
+  width: 38px;
+  height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.cz-thumb.cz-skin {
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.6);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+}
+.cz-thumb svg {
+  height: 38px;
+  width: auto;
+  max-width: 40px;
+  display: block;
+}
+.cz-thumb.cz-sword svg {
+  height: 40px;
+}
+.cz-thumb.cz-cloak svg {
+  height: 38px;
+  width: 38px;
+}
+.cz-thumb.cz-cloak.none {
+  font-size: 9px;
+  color: #7c8794;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+/* Image/GIF cosmetics in the grid */
+.cz-thumb.cz-img {
+  width: 38px;
+  height: 38px;
+  border-radius: 8px;
+  background-size: cover;
+  background-position: center;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+.cz-thumb.cz-img.cz-skin {
+  border-radius: 50%;
+}
+/* Image/GIF cosmetics in the loadout preview */
+.sp-sword img {
+  height: 56px;
+  width: auto;
+  display: block;
+}
+.sp-castle img {
+  height: 54px;
+  width: auto;
+  display: block;
+  border-radius: 6px;
+}
+/* Live loadout preview at the top of the shop (mirrors the in-game look, with a swinging sword) */
+.shop-preview {
+  position: relative;
+  display: flex;
+  align-items: flex-end; /* avatar + castle share one ground line */
+  justify-content: center;
+  gap: 18px;
+  margin: 2px 0 12px;
+  padding: 18px 14px 22px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--glass-border);
+  border-radius: 14px;
+  overflow: hidden;
+}
+/* One soft floor the whole scene stands on, so nothing looks like it's floating. */
+.shop-preview::after {
+  content: "";
+  position: absolute;
+  left: 12%;
+  right: 12%;
+  bottom: 13px;
+  height: 12px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.42), transparent 74%);
+  pointer-events: none;
+}
+.shop-preview.pulse {
+  animation: shopPulse 0.5s ease;
+}
+@keyframes shopPulse {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.06);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+.sp-fig {
+  position: relative;
+  width: 116px;
+  height: 84px;
+  animation: lunge 1.4s infinite; /* the character lunges into each strike */
+}
+.sp-avatar {
+  position: absolute;
+  bottom: 0;
+  right: 14px;
+  z-index: 1; /* capes (z3) render over it, wings (z0) behind it */
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.sp-num {
+  font-size: 13px;
+  font-weight: 800;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7), 0 0 3px rgba(0, 0, 0, 0.5);
+}
+/* Cloak/wings centred on the avatar: wings behind it, capes over the lower body (their art is
+   drawn below the number, so it doesn't cover it). */
+.sp-cloak {
+  position: absolute;
+  /* Centred on the avatar (52px) at the in-game ratio: the cloak sprite is 2.5x the avatar, so
+     the art lands at the same scale relative to the body as it does in the game. */
+  right: -22px;
+  bottom: -36px;
+  width: 124px;
+  height: 124px;
+  pointer-events: none;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.4));
+}
+.sp-cloak.wings {
+  z-index: 0;
+}
+.sp-cloak.cape {
+  z-index: 3;
+}
+/* Hat/hair/shirt in the preview: centred on the avatar like the cloak; shirt under the cloak,
+   hair under the hat, both over the head. */
+.sp-wear {
+  position: absolute;
+  right: -22px;
+  bottom: -36px;
+  width: 124px;
+  height: 124px;
+  pointer-events: none;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.35));
+}
+.sp-wear svg,
+.sp-wear img {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.sp-shirt {
+  z-index: 2;
+}
+.sp-hair {
+  z-index: 4;
+}
+.sp-hat {
+  z-index: 5;
+}
+.sp-cloak svg,
+.sp-cloak img {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+/* Sword held to the left of the avatar, fencing OUTWARD (negative angles tip the blade left, away
+   from the body). A quick flurry: guard, cock back, slash across, two jabs to the point, sweep home. */
+.sp-sword {
+  position: absolute;
+  bottom: 2px;
+  left: 18px;
+  transform-origin: 50% 88%;
+  animation: swordFight 1.4s infinite;
+}
+.sp-sword svg {
+  height: 60px;
+  width: auto;
+  display: block;
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.45));
+}
+@keyframes swordFight {
+  0%,
+  14% {
+    transform: rotate(20deg); /* on guard, brief hold */
+  }
+  22% {
+    transform: rotate(42deg); /* cock back */
+    animation-timing-function: cubic-bezier(0.3, 0, 0.1, 1);
+  }
+  34% {
+    transform: rotate(-72deg); /* SLASH across to the point */
+    animation-timing-function: cubic-bezier(0.2, 0, 0, 1);
+  }
+  42% {
+    transform: rotate(-56deg); /* recoil */
+  }
+  50% {
+    transform: rotate(-90deg); /* jab — point at the opponent */
+    animation-timing-function: ease-out;
+  }
+  58% {
+    transform: rotate(-64deg); /* pull back */
+  }
+  66% {
+    transform: rotate(-92deg); /* quick second jab */
+    animation-timing-function: ease-out;
+  }
+  78% {
+    transform: rotate(20deg); /* sweep home to guard */
+    animation-timing-function: cubic-bezier(0.4, 0, 0.4, 1);
+  }
+  100% {
+    transform: rotate(20deg);
+  }
+}
+/* Slash trail: a white arc that flashes along the blade's path during the slash. */
+.sp-slash {
+  position: absolute;
+  left: -2px;
+  bottom: 12px;
+  width: 50px;
+  height: 50px;
+  border: 3px solid var(--slash-color, rgba(255, 255, 255, 0.9)); /* tinted to the sword's colour */
+  border-radius: 50%;
+  border-right-color: transparent;
+  border-bottom-color: transparent;
+  opacity: 0;
+  pointer-events: none;
+  animation: slashArc 1.4s infinite;
+}
+/* Flare-textured swoosh: a ring of the sword's flare image instead of a coloured arc. */
+.sp-slash.tex {
+  border: none;
+  background-image: var(--slash-img);
+  background-size: cover;
+  -webkit-mask: radial-gradient(circle, transparent 56%, #000 60%, #000 80%, transparent 84%);
+  mask: radial-gradient(circle, transparent 56%, #000 60%, #000 80%, transparent 84%);
+}
+@keyframes slashArc {
+  0%,
+  28% {
+    opacity: 0;
+    transform: rotate(-50deg) scale(0.6);
+  }
+  35% {
+    opacity: 0.9;
+    transform: rotate(0deg) scale(1);
+  }
+  48% {
+    opacity: 0;
+    transform: rotate(55deg) scale(1.2);
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes lunge {
+  0%,
+  28% {
+    transform: translateX(0);
+  }
+  37% {
+    transform: translateX(-7px);
+  }
+  60% {
+    transform: translateX(-4px);
+  }
+  76% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+.sp-castle svg {
+  height: 64px; /* a building, not a same-size icon */
+  width: auto;
+  display: block;
+}
+/* Card currently shown in the preview (try-before-you-buy selection) */
+.cz-card.sel {
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.55);
+}
+
+/* --- Medal balance counter (top-right of the shop dialog) --- */
+.shop-medals {
+  position: absolute;
+  top: 13px;
+  right: 46px; /* clear the close button */
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.shop-medals .medal-ico svg,
+.cz-cost svg {
+  width: 16px;
+  height: 16px;
+  display: block;
+}
+.medal-count {
+  font-size: 14px;
+  font-weight: 800;
+  color: #f2c14e;
+  font-variant-numeric: tabular-nums;
+}
+.medal-plus {
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+  font-weight: 800;
+  line-height: 1;
+  color: #06281a;
+  background: linear-gradient(180deg, #5de29a, #36c46e);
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: filter 120ms ease;
+}
+.medal-plus:hover {
+  filter: brightness(1.08);
+}
+.cz-cost {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.cz-btn.buy {
+  color: #f4cf6a;
+  border-color: rgba(242, 193, 78, 0.45);
+}
+.cz-btn.buy:hover {
+  border-color: #f2c14e;
+}
+/* Inline medal in the defeat banner (scales with the banner's font size) */
+.medal-inline {
+  display: inline-flex;
+  vertical-align: middle;
+}
+.medal-inline svg {
+  width: 0.9em;
+  height: 0.9em;
+}
+
+/* --- Premium entry (bottom of the shop) --- */
+.shop-premium {
+  width: 100%;
+  margin-top: 10px;
+  padding: 11px 14px;
+  font-size: 13px;
+  font-weight: 800;
+  color: #ffe9a8;
+  background: linear-gradient(180deg, rgba(242, 193, 78, 0.18), rgba(242, 193, 78, 0.07));
+  border: 1px solid rgba(242, 193, 78, 0.4);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: filter 120ms ease, border-color 120ms ease;
+}
+.shop-premium:hover {
+  filter: brightness(1.1);
+  border-color: #f2c14e;
+}
+
+/* --- Buy Medals sheet --- */
+.pack-list {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  margin-top: 6px;
+}
+.pack {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 13px 14px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: border-color 120ms ease, background 120ms ease;
+}
+.pack:hover {
+  border-color: var(--turf);
+  background: rgba(255, 255, 255, 0.08);
+}
+.pack-medals {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 16px;
+  font-weight: 800;
+  color: #f4cf6a;
+}
+.pack-medals svg {
+  width: 20px;
+  height: 20px;
+}
+.pack-price {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--text);
+}
+.pack-badge {
+  position: absolute;
+  top: -7px;
+  left: 12px;
+  padding: 1px 7px;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: #06281a;
+  background: #5de29a;
+  border-radius: 999px;
+}
+.pack-badge.best {
+  background: #f2c14e;
+  color: #2a1c00;
+}
+
+/* --- Premium screen --- */
+.premium-card {
+  width: min(92vw, 400px);
+}
+.premium-plan {
+  margin-top: 6px;
+  padding: 16px;
+  background: linear-gradient(180deg, rgba(242, 193, 78, 0.14), rgba(242, 193, 78, 0.05));
+  border: 1px solid rgba(242, 193, 78, 0.4);
+  border-radius: 14px;
+}
+.pp-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.pp-name {
+  font-size: 18px;
+  font-weight: 800;
+  color: #fff;
+}
+.pp-price {
+  font-size: 22px;
+  font-weight: 800;
+  color: #f4cf6a;
+}
+.pp-price small {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+.pp-perks {
+  margin: 0 0 14px;
+  padding-left: 0;
+  list-style: none;
+}
+.pp-perks li {
+  position: relative;
+  padding: 4px 0 4px 22px;
+  font-size: 13.5px;
+  color: var(--text);
+}
+.pp-perks li::before {
+  content: "✓";
+  position: absolute;
+  left: 2px;
+  color: var(--turf);
+  font-weight: 800;
+}
+.premium-alt {
+  margin-top: 12px;
+  padding: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--glass-border);
+  border-radius: 14px;
+}
+.pp-sub {
+  margin: 4px 0 12px;
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+.cz-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+}
+.cz-btn {
+  padding: 4px 11px;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 8px;
+  cursor: pointer;
+  border: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+  transition: filter 120ms ease, border-color 120ms ease;
+}
+.cz-btn.equip {
+  border: none;
+  color: #06281a;
+  background: linear-gradient(180deg, #5de29a, #36c46e);
+}
+.cz-btn.equip:hover {
+  filter: brightness(1.06);
+}
+.cz-btn.locked {
+  color: var(--text-muted);
+}
+.cz-btn.member {
+  border: none;
+  color: #1a1206;
+  background: linear-gradient(180deg, #ecc862, #d9b24c);
+}
+.cz-btn.member:hover {
+  filter: brightness(1.06);
+}
+.cz-state.equipped {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--turf);
+}
+
+/* --- Home footer links: privacy policy + socials (bottom-left of the start screen) --- */
+.home-links {
+  position: absolute;
+  left: 22px;
+  bottom: 20px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+/* Phones: stack the home screen into a scrollable column so the modal never overlaps the footer
+   links / store badges (they're bottom-pinned on desktop). */
+@media (max-width: 560px) {
+  #start-screen {
+    flex-direction: column;
+    justify-content: flex-start;
+    overflow-y: auto;
+    padding: 20px 0 28px;
+  }
+  .kofi-home {
+    position: static;
+    margin: 16px auto 0;
+  }
+  .home-links {
+    position: static;
+    margin: 16px auto 0;
+    flex-wrap: wrap;
+    justify-content: center;
+    padding: 0 16px;
+  }
+}
+.home-link {
+  display: inline-flex;
+  align-items: center;
+  color: rgba(255, 255, 255, 0.55);
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 600;
+  transition: color 120ms ease, transform 120ms ease;
+}
+.home-link:hover {
+  color: #fff;
+}
+.home-link.icon svg {
+  display: block;
+  width: 18px;
+  height: 18px;
+  fill: currentColor;
+}
+.home-link.icon:hover {
+  transform: translateY(-1px);
+}
+
+/* App Store / Google Play badges */
+.store-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 11px 5px 9px;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: rgba(255, 255, 255, 0.85);
+  text-decoration: none;
+  transition: background 120ms ease, border-color 120ms ease, transform 120ms ease, opacity 120ms ease;
+}
+.store-badge:hover {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.32);
+  transform: translateY(-1px);
+}
+.store-logo {
+  width: 18px;
+  height: 18px;
+  fill: currentColor;
+  flex: none;
+}
+.store-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.05;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.store-text small {
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  opacity: 0.7;
+}
+/* Until a URL is set: muted, non-clickable, labelled "Coming soon". */
+.store-badge.coming-soon {
+  opacity: 0.5;
+  cursor: default;
+  pointer-events: none;
+}
+.store-badge.coming-soon::after {
+  content: "Soon";
+  margin-left: 2px;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: #fbbf24;
 }
 
 /* --- Arena news feed (bottom-left) --- */
@@ -916,7 +2437,9 @@ body.touch .ev-row {
     margin-bottom: 2px;
     font-size: 11px;
   }
-  body.touch input[type="text"] {
+  body.touch input[type="text"],
+  body.touch input[type="email"],
+  body.touch input[type="password"] {
     padding: 8px 10px;
     font-size: 14px;
   }
@@ -955,6 +2478,50 @@ body.touch .ev-row {
     bottom: 12px;
     padding: 6px 11px;
     font-size: 12px;
+  }
+  body.touch .home-links {
+    left: 12px;
+    bottom: 10px;
+    gap: 10px;
+  }
+  body.touch .home-link {
+    font-size: 12px;
+  }
+  body.touch .home-link.icon svg {
+    width: 16px;
+    height: 16px;
+  }
+  body.touch .store-badge {
+    padding: 4px 8px;
+    gap: 5px;
+  }
+  body.touch .store-logo {
+    width: 15px;
+    height: 15px;
+  }
+  body.touch .store-text {
+    font-size: 11px;
+  }
+  body.touch .store-text small {
+    display: none; /* drop the tiny "Download on the" line to save width on phones */
+  }
+  body.touch .account-chip {
+    top: 10px;
+    right: 12px;
+    padding: 6px 11px;
+    font-size: 12px;
+  }
+  body.touch .home-topleft {
+    top: 10px;
+    left: 12px;
+  }
+  body.touch .auth-card {
+    padding: 16px 18px 12px;
+    max-height: 92vh;
+    overflow-y: auto;
+  }
+  body.touch .auth-sub {
+    display: none; /* save vertical space on a short screen */
   }
 
   body.touch .hud-left {
@@ -1048,9 +2615,113 @@ body.touch .combat-power {
    on-screen keyboard. In-app webviews (e.g. the CrazyGames app) don't shift the page for the
    keyboard, so without this the field is hidden behind it. The .kb-open class is added on focus
    (main.ts) and removed on blur. More specific than the centering rules, so it wins. --- */
-body.touch #start-screen.kb-open {
+/* While a field is focused on touch, shrink the (fixed) overlay to the visible area above the
+   keyboard (--vvh, set from visualViewport in main.ts) and let it scroll, so the focused field is
+   never hidden behind the keyboard. Falls back to full height if --vvh is unavailable. */
+body.touch #start-screen.kb-open,
+body.touch .auth-overlay.kb-open {
+  height: var(--vvh, 100%);
   align-items: flex-start;
+  overflow-y: auto;
 }
-body.touch #start-screen.kb-open .modal {
+body.touch #start-screen.kb-open .modal,
+body.touch .auth-overlay.kb-open .auth-card {
   margin-top: max(8px, env(safe-area-inset-top));
+  margin-bottom: 16px; /* so the last field clears the bottom while scrolling */
+}
+
+/* --- Short landscape phones: keep the account + shop dialogs fully accessible. The whole card
+   scrolls as ONE container (no nested scrollbars), and the contents compact so nothing is cut
+   off above the keyboard / screen edge. --- */
+@media (max-height: 540px) {
+  /* Scroll the whole OVERLAY (top-aligned), not the card — otherwise a centered card taller than
+     the visible viewport has its bottom clipped off-screen with no way to reach it. The bottom
+     padding makes sure the last row clears the browser/keyboard chrome. */
+  body.touch .auth-overlay {
+    align-items: flex-start;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 10px 0 44px;
+  }
+  body.touch .auth-card {
+    margin: auto; /* centered when it fits, scrolls from the top when it doesn't */
+    padding: 14px 16px 10px;
+    max-height: none;
+    overflow: visible;
+  }
+  body.touch .auth-title {
+    font-size: 18px;
+  }
+  body.touch .social-btn {
+    margin-bottom: 7px;
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+  body.touch .auth-divider {
+    margin: 8px 0;
+  }
+  body.touch .auth-who {
+    margin-bottom: 10px;
+  }
+  body.touch .auth-secondary {
+    margin-top: 8px;
+    padding: 9px 14px;
+  }
+  /* Shop: let the card be the single scroll area; shrink the preview + cards to fit. */
+  body.touch .shop-list {
+    max-height: none;
+    overflow: visible;
+  }
+  body.touch .shop-preview {
+    gap: 14px;
+    margin-bottom: 8px;
+    padding: 12px 10px 16px;
+  }
+  body.touch .sp-fig {
+    width: 96px;
+    height: 64px;
+  }
+  body.touch .sp-avatar {
+    width: 42px;
+    height: 42px;
+    right: 8px;
+  }
+  body.touch .sp-num {
+    font-size: 11px;
+  }
+  body.touch .sp-sword {
+    left: 8px;
+  }
+  body.touch .sp-sword svg {
+    height: 50px;
+  }
+  body.touch .sp-slash {
+    width: 42px;
+    height: 42px;
+  }
+  body.touch .sp-castle svg {
+    height: 54px;
+  }
+  body.touch .cz-group {
+    margin-bottom: 8px;
+  }
+  body.touch .cz-grid {
+    gap: 6px;
+  }
+  body.touch .cz-card {
+    padding: 8px 4px 7px;
+    gap: 4px;
+  }
+  body.touch .cz-thumb,
+  body.touch .cz-thumb svg {
+    width: 28px;
+    height: 28px;
+  }
+  body.touch .cz-name {
+    font-size: 11px;
+  }
+  body.touch .cz-btn {
+    padding: 3px 9px;
+    font-size: 10px;
+  }
 }

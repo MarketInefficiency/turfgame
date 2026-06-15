@@ -16,8 +16,8 @@ export const CONFIG = {
   SPEED_K: 800, // how fast speed falls off with size
 
   // --- Camera / zoom (game-spec §6) ---
-  ZOOM_WILD: 1.0, // shared zoom outside own territory
-  ZOOM_HOME_MIN: 0.4, // most zoomed-out the home survey view goes
+  ZOOM_WILD: 1.5, // shared zoom outside own territory
+  ZOOM_HOME_MIN: 0.7, // most zoomed-out the home survey view goes (half the zoom-out it used to)
 
   // --- Combat (game-spec §8) ---
   DRAIN_RATE: 25, // army/sec drained from each side in wilderness contact
@@ -51,6 +51,7 @@ export const CONFIG = {
   NIGHT_LINES: "#8a4fff", // grid lines by night (purple)
   DAY_BORDER: "#1d2430", // avatar border by day (dark, contrasts white floor)
   NIGHT_BORDER: "#e8eaed", // avatar border by night (light, contrasts black floor)
+  NIGHT_GLOW: "#ffe2a6", // warm light radiating from avatars/territory at night (additive)
 
   // --- Movement input & netcode (control feel; game-spec §4, architecture.md) ---
   AIM_DEADZONE: 6, // cursor offset (screen px) below which the avatar is stationary
@@ -72,10 +73,15 @@ export const CONFIG = {
   TRAIL_MAX_CELLS: 6000, // safety cap on an in-progress claim trail
 
   // --- Rendering (presentation constants; architecture.md) ---
-  AVATAR_RADIUS: 22, // fixed on-screen avatar radius in px (never scales with army/zoom)
+  AVATAR_RADIUS: 22, // base on-screen avatar radius in px (never scales with army/zoom)
+  // On-screen avatar size blends with the camera: full size in the wild, smaller in the zoomed-out
+  // home survey view (so it doesn't dwarf your own territory).
+  AVATAR_SCALE_WILD: 1.6,
+  AVATAR_SCALE_HOME: 0.7,
   FLOOR_GRID_STEP: 64, // px between floor grid lines (visual; coarser than GRID_CELL)
   LEADERBOARD_SIZE: 10, // how many players the live leaderboard shows (top N by army)
   GOLD_OUTLINE: "#ffd24a", // private owner-only border around your own territory (game-spec §11)
+  ENEMY_OUTLINE: "#101216", // black border drawn around every OTHER player's territory
   SWORD_COLOR: "#ffcf3f", // golden combat icon shown over players fighting in the wild
   CROWN_GOLD: "#ffd24a", // crown for the #1 player on the leaderboard
   CROWN_SILVER: "#cfd6dd", // crown for #2
@@ -109,6 +115,11 @@ export const CONFIG = {
   BOT_CREATE_INTERVAL_MAX: 3.5,
   BOT_RESPAWN_MIN: 1.5, // seconds a downed bot waits before "rejoining" (human-like)
   BOT_RESPAWN_MAX: 5.0,
+
+  // --- Medals (soft currency) ---
+  // Awarded on defeat = floor(peakPower / MEDAL_DEFEAT_DIVISOR). Lean: a big run nets only a
+  // handful, so cosmetics are mostly a purchase (premium-forward). Server-authoritative.
+  MEDAL_DEFEAT_DIVISOR: 500,
 
   // --- Spawn protection ---
   SPAWN_IMMUNITY_SEC: 3, // grace period after (re)spawn: can't kill or be killed (avatar blinks)

@@ -149,19 +149,64 @@ export class ServerGrid {
       for (let i = 0; i < GRID_SIZE; i++) if (this.cells[i] === owner) this.setOwner(i, DECAY_OWNER);
       return k;
     }
-    const core = this.cores.get(owner); // never shed the capital cell — it holds the castle
-    const idxs: number[] = [];
-    for (let i = 0; i < GRID_SIZE; i++) if (this.cells[i] === owner && i !== core) idxs.push(i);
+    const core = this.cores.get(owner) ?? -1; // never shed the capital cell — it holds the castle
     const S = CONFIG.GRID_CELL;
     const d2 = (idx: number): number => {
       const dx = cellX(idx) * S + S / 2 - fromX;
       const dy = cellY(idx) * S + S / 2 - fromY;
       return dx * dx + dy * dy;
     };
-    idxs.sort((a, b) => d2(b) - d2(a)); // furthest first
-    const limit = Math.min(n, idxs.length);
-    for (let i = 0; i < limit; i++) this.setOwner(idxs[i]!, DECAY_OWNER); // crumble, don't vanish
-    return limit;
+    // Peel cells furthest from the avatar, but only spanning-tree LEAVES so the kingdom NEVER
+    // splits. Removing arbitrary furthest cells could isolate the protected core into a tiny
+    // cluster; the contiguity sweep then reaps the whole disconnected bulk in one jump — the
+    // "300 → 0 instant death" seen in a wild skirmish. Leaves can be removed safely in any subset.
+    let removed = 0;
+    let guard = 0;
+    while (removed < n && guard++ < GRID_SIZE) {
+      const leaves = this.spanningTreeLeaves(owner, core);
+      if (leaves.length === 0) break;
+      leaves.sort((a, b) => d2(b) - d2(a)); // furthest first
+      const take = Math.min(n - removed, leaves.length);
+      for (let i = 0; i < take; i++) {
+        this.setOwner(leaves[i]!, DECAY_OWNER); // crumble, don't vanish
+        removed++;
+      }
+    }
+    return removed;
+  }
+
+  /**
+   * Leaves of a spanning tree of `owner`'s cells rooted at the core (4-connectivity). Removing any
+   * subset of these can never disconnect the rest, so shedding them keeps the kingdom contiguous.
+   */
+  private spanningTreeLeaves(owner: number, core: number): number[] {
+    let start = core >= 0 && this.cells[core] === owner ? core : -1;
+    if (start < 0) {
+      for (let i = 0; i < GRID_SIZE; i++) {
+        if (this.cells[i] === owner) {
+          start = i;
+          break;
+        }
+      }
+    }
+    if (start < 0) return [];
+    const parent = new Map<number, number>();
+    parent.set(start, -1);
+    const queue = [start];
+    const hasChild = new Set<number>();
+    for (let qi = 0; qi < queue.length; qi++) {
+      const c = queue[qi]!;
+      for (const ni of this.neighbors(c)) {
+        if (this.cells[ni] === owner && !parent.has(ni)) {
+          parent.set(ni, c);
+          hasChild.add(c);
+          queue.push(ni);
+        }
+      }
+    }
+    const leaves: number[] = [];
+    for (const c of queue) if (c !== core && !hasChild.has(c)) leaves.push(c);
+    return leaves;
   }
 
   /**
