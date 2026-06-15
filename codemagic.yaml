@@ -23,6 +23,12 @@ workflows:
         XCODE_SCHEME: "App"
         BUNDLE_ID: "io.turfgame.app"
         APP_STORE_APPLE_ID: "6780508305" # Turfgame in App Store Connect
+        # Vite reads process.env.VITE_* at build time, so set the PUBLIC client config here too.
+        # This guarantees accounts/shop/sign-in are enabled in the native build even if .env.production
+        # isn't picked up in CI. All public (publishable key + URLs), never the secret key.
+        VITE_SERVER_URL: "wss://turfgame.io/colyseus"
+        VITE_SUPABASE_URL: "https://derxaiqacejjzgdqlsdr.supabase.co"
+        VITE_SUPABASE_ANON_KEY: "sb_publishable_IKOiE7lmQucUIlo3300Wlw_hMF6cY4b"
       node: 22
       xcode: latest
       cocoapods: default

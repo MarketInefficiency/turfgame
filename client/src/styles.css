@@ -471,7 +471,9 @@ input[type="text"].room-code {
 }
 /* Native context hides these (no generic .hidden rule exists, so each needs its own). */
 .kofi.hidden,
-.store-badge.hidden {
+.store-badge.hidden,
+.account-chip.hidden,
+.home-topleft.hidden {
   display: none;
 }
 /* --- Death / run summary --- */
