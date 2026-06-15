@@ -49,6 +49,7 @@ import * as ads from "./ads";
 import { runContext, stripeCheckoutAllowed } from "./platform";
 import { isNative, nativePurchase, nativeRestore } from "./native";
 import { initNativeShell } from "./nativeShell";
+import { nativeAppleSignIn } from "./auth/appleNative";
 
 /**
  * M1 entry point: drive the start screen → join → game flow.
@@ -1043,7 +1044,18 @@ function wireAccount(): void {
     });
   };
   authGoogle.addEventListener("click", () => oauth("google"));
-  authApple.addEventListener("click", () => oauth("apple"));
+  authApple.addEventListener("click", () => {
+    // Native iOS uses the real Apple sheet (guideline 4.8); web uses the OAuth redirect.
+    if (isNative()) {
+      setAuthMsg("Opening Apple…");
+      void nativeAppleSignIn().then((err) => {
+        if (err) setAuthMsg(err);
+        else closeAuth();
+      });
+    } else {
+      oauth("apple");
+    }
+  });
 }
 
 /** A medal cost chip: the custom medal icon + the number. */

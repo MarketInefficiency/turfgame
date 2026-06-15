@@ -125,6 +125,17 @@ export async function signInWithProvider(provider: "google" | "apple"): Promise<
   return error ? error.message : null;
 }
 
+/**
+ * Native Sign in with Apple: the device returns an Apple identity token (with a hashed nonce) which
+ * we hand to Supabase along with the matching raw nonce. Used on iOS instead of the OAuth redirect
+ * (Apple guideline 4.8 wants the native sheet). Returns an error message, or null on success.
+ */
+export async function signInWithAppleIdToken(idToken: string, nonce: string): Promise<string | null> {
+  if (!supabase) return "Accounts are not available.";
+  const { error } = await supabase.auth.signInWithIdToken({ provider: "apple", token: idToken, nonce });
+  return error ? error.message : null;
+}
+
 export async function signOut(): Promise<void> {
   if (!supabase) return;
   await supabase.auth.signOut();
