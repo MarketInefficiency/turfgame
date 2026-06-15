@@ -1484,8 +1484,31 @@ function applyRunContext(): void {
   }
 }
 
+/**
+ * TEMP on-screen debug console for the native TestFlight build (remove before public release).
+ * Loads eruda (a floating console button) and logs every tap, so we can see — on the actual device —
+ * whether taps on the corner chips fire a click and reach a handler, or throw.
+ */
+function initDebugConsole(): void {
+  const want = isNative() || new URLSearchParams(location.search).get("debug") === "1";
+  if (!want) return;
+  void import("eruda").then((m) => {
+    m.default.init();
+    console.log("[debug] eruda ready; context =", runContext(), "accountsEnabled =", accountsEnabled);
+  });
+  document.addEventListener(
+    "click",
+    (e) => {
+      const t = e.target as Element;
+      console.log("[debug] CLICK →", t.id || t.className || t.tagName);
+    },
+    true, // capture phase: logs even if something stops propagation
+  );
+}
+
 async function boot(): Promise<void> {
   if (isTouchDevice()) document.body.classList.add("touch"); // enables the touch-scoped CSS
+  initDebugConsole();
   applyRunContext();
   void initNativeShell(); // native only: landscape lock, status bar, hide splash
   game = await createGame();
