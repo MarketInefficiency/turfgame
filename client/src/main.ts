@@ -48,6 +48,7 @@ import { loadName, saveName } from "./storage";
 import * as ads from "./ads";
 import { runContext, stripeCheckoutAllowed } from "./platform";
 import { isNative, nativePurchase, nativeRestore } from "./native";
+import { initNativeShell } from "./nativeShell";
 
 /**
  * M1 entry point: drive the start screen → join → game flow.
@@ -1483,6 +1484,7 @@ function applyRunContext(): void {
 async function boot(): Promise<void> {
   if (isTouchDevice()) document.body.classList.add("touch"); // enables the touch-scoped CSS
   applyRunContext();
+  void initNativeShell(); // native only: landscape lock, status bar, hide splash
   game = await createGame();
   await catalog.loadCatalog(); // DB cosmetics + today's rotation (falls back to built-ins if offline)
   wireStartScreen();

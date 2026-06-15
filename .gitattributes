@@ -1,0 +1,4 @@
+# Keep shell scripts and the Gradle wrapper LF so they run on Linux/macOS CI (Codemagic),
+# regardless of each contributor's core.autocrlf setting on Windows.
+gradlew text eol=lf
+*.sh text eol=lf
