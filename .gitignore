@@ -6,3 +6,10 @@ build/
 .env.*.local
 *.local
 .DS_Store
+# Stripe/Supabase secret files used during setup — never commit
+stripe-secrets.env
+*.secrets.env
+
+# Marketing/source media — not part of the app build
+business_assets/
+gifs_to_skin/
