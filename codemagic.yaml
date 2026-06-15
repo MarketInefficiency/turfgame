@@ -56,10 +56,12 @@ workflows:
           xcodebuild -resolvePackageDependencies -project App.xcodeproj -scheme App
       - name: Sign + build IPA
         script: |
-          # Create the distribution cert + App Store profile (if missing) and apply them to the
-          # project, then archive — all in one step so the applied signing can't get lost between
-          # steps. The grep confirms use-profiles actually wrote the profile into the project.
+          set -e
           keychain initialize
+          # Fresh account: fetch-signing-files --create makes the PROFILE but not a CERTIFICATE, so
+          # create the distribution certificate first (|| true so re-runs that hit an existing one
+          # don't abort), then fetch/create the App Store profile, add the cert, apply, and archive.
+          app-store-connect create-certificate --type IOS_DISTRIBUTION --save || echo "cert may already exist; continuing"
           app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP_STORE --create
           keychain add-certificates
           xcode-project use-profiles --project "$XCODE_PROJECT"
