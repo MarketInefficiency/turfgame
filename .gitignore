@@ -13,3 +13,7 @@ stripe-secrets.env
 # Marketing/source media — not part of the app build
 business_assets/
 gifs_to_skin/
+
+# Supabase CLI local state
+supabase/.temp/
+supabase/.branches/
