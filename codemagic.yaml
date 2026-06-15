@@ -57,6 +57,13 @@ workflows:
           app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP_STORE --create
           keychain add-certificates
           xcode-project use-profiles
+      - name: Resolve Swift packages & verify scheme
+        script: |
+          cd client/ios/App
+          echo "--- schemes/targets xcodebuild can see ---"
+          xcodebuild -list -project App.xcodeproj || true
+          echo "--- resolving Swift Package Manager dependencies (Capacitor 8) ---"
+          xcodebuild -resolvePackageDependencies -project App.xcodeproj -scheme App
       - name: Build IPA
         script: |
           xcode-project build-ipa --project "$XCODE_PROJECT" --scheme "$XCODE_SCHEME"
