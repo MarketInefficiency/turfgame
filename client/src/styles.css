@@ -467,6 +467,11 @@ input[type="text"].room-code {
 .premium-legal.hidden {
   display: none;
 }
+/* Native context hides these (no generic .hidden rule exists, so each needs its own). */
+.kofi.hidden,
+.store-badge.hidden {
+  display: none;
+}
 /* --- Death / run summary --- */
 .death-overlay {
   background: rgba(8, 12, 20, 0.55);
