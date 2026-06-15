@@ -49,23 +49,23 @@ workflows:
           cd client/ios/App
           LATEST=$(app-store-connect get-latest-testflight-build-number "$APP_STORE_APPLE_ID" 2>/dev/null || echo 0)
           agvtool new-version -all $(($LATEST + 1))
-      - name: Set up code signing (creates the distribution cert + profile if missing)
-        script: |
-          keychain initialize
-          # Creates a distribution certificate AND an App Store provisioning profile for the bundle
-          # id if the account doesn't have them yet (fresh account), using the App Store Connect key.
-          app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP_STORE --create
-          keychain add-certificates
-          xcode-project use-profiles
-      - name: Resolve Swift packages & verify scheme
+      - name: Resolve Swift packages (Capacitor 8 SPM)
         script: |
           cd client/ios/App
-          echo "--- schemes/targets xcodebuild can see ---"
           xcodebuild -list -project App.xcodeproj || true
-          echo "--- resolving Swift Package Manager dependencies (Capacitor 8) ---"
           xcodebuild -resolvePackageDependencies -project App.xcodeproj -scheme App
-      - name: Build IPA
+      - name: Sign + build IPA
         script: |
+          # Create the distribution cert + App Store profile (if missing) and apply them to the
+          # project, then archive — all in one step so the applied signing can't get lost between
+          # steps. The grep confirms use-profiles actually wrote the profile into the project.
+          keychain initialize
+          app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP_STORE --create
+          keychain add-certificates
+          xcode-project use-profiles --project "$XCODE_PROJECT"
+          echo "--- signing settings after use-profiles ---"
+          grep -E "PROVISIONING_PROFILE_SPECIFIER|DEVELOPMENT_TEAM|CODE_SIGN_STYLE|CODE_SIGN_IDENTITY" "$XCODE_PROJECT/project.pbxproj" | sort -u || true
+          echo "------------------------------------------"
           xcode-project build-ipa --project "$XCODE_PROJECT" --scheme "$XCODE_SCHEME"
     artifacts:
       - build/ios/ipa/*.ipa
