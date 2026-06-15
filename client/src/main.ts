@@ -49,7 +49,6 @@ import * as ads from "./ads";
 import { runContext, stripeCheckoutAllowed } from "./platform";
 import { isNative, nativePurchase, nativeRestore } from "./native";
 import { initNativeShell } from "./nativeShell";
-import { nativeAppleSignIn } from "./auth/appleNative";
 
 /**
  * M1 entry point: drive the start screen → join → game flow.
@@ -1044,18 +1043,10 @@ function wireAccount(): void {
     });
   };
   authGoogle.addEventListener("click", () => oauth("google"));
-  authApple.addEventListener("click", () => {
-    // Native iOS uses the real Apple sheet (guideline 4.8); web uses the OAuth redirect.
-    if (isNative()) {
-      setAuthMsg("Opening Apple…");
-      void nativeAppleSignIn().then((err) => {
-        if (err) setAuthMsg(err);
-        else closeAuth();
-      });
-    } else {
-      oauth("apple");
-    }
-  });
+  // Apple sign-in via Supabase OAuth. NOTE: the native Apple sheet plugin is Capacitor-7 only and
+  // conflicts with Capacitor 8's SPM graph, so it's removed for now; a Cap-8-compatible native Apple
+  // sign-in must be added back before App Store submission (guideline 4.8).
+  authApple.addEventListener("click", () => oauth("apple"));
 }
 
 /** A medal cost chip: the custom medal icon + the number. */
