@@ -59,6 +59,9 @@ workflows:
           # portrait rotate-gate never flashes, and the device can flip between the two landscapes.
           plutil -replace UISupportedInterfaceOrientations -json '["UIInterfaceOrientationLandscapeLeft","UIInterfaceOrientationLandscapeRight"]' "$PLIST"
           plutil -replace 'UISupportedInterfaceOrientations~ipad' -json '["UIInterfaceOrientationLandscapeLeft","UIInterfaceOrientationLandscapeRight"]' "$PLIST"
+          # A landscape-only app must opt out of iPad multitasking (Split View / Slide Over), otherwise
+          # Apple rejects the upload (error 90474) for not declaring all four orientations on iPad.
+          plutil -replace UIRequiresFullScreen -bool YES "$PLIST"
       - name: Generate app icon & splash
         script: |
           cd client
