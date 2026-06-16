@@ -44,7 +44,9 @@ export const CONFIG = {
 
   // --- Day/night cycle (ui-ux.md §4) ---
   DAY_NIGHT_PERIOD: 300, // seconds for a full day↔night cycle
-  DAY_NIGHT_TRANSITION: 30, // seconds of lerp between day and night
+  // Quick fade so the floor spends as little time as possible at the washed-out gray midpoint
+  // (white→black passes through gray); day holds bright white, night holds black, the gray is brief.
+  DAY_NIGHT_TRANSITION: 10, // seconds of lerp between day and night
   DAY_BG: "#ffffff", // floor background by day
   NIGHT_BG: "#000000", // floor background by night
   DAY_LINES: "#cccccc", // grid lines by day (grey)
