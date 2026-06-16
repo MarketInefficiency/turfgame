@@ -238,9 +238,12 @@ function enterGame(room: Room, name: string): void {
  * Touch only: flash the "Move / Hold to draw" hint over the arena, since the right-side draw
  * zone is invisible. Fades out after 5s or as soon as the player has placed both thumbs.
  */
+let dismissTouchHint: (() => void) | null = null; // active hint's cleanup, so leaving can cancel it
+
 function showTouchHint(): void {
   const hint = document.getElementById("touch-hint");
   if (!hint) return;
+  dismissTouchHint?.(); // clear any previous hint first
   setVisible(hint, true);
   let leftDown = false;
   let rightDown = false;
@@ -249,6 +252,7 @@ function showTouchHint(): void {
     setVisible(hint, false);
     window.removeEventListener("pointerdown", onTouch);
     window.clearTimeout(timer);
+    dismissTouchHint = null;
   };
   const onTouch = (e: PointerEvent): void => {
     if (e.pointerType !== "touch") return;
@@ -258,11 +262,13 @@ function showTouchHint(): void {
   };
   window.addEventListener("pointerdown", onTouch);
   timer = window.setTimeout(done, 5000);
+  dismissTouchHint = done;
 }
 
 function backToStart(message?: string): void {
   currentRoom = null;
   game.leave();
+  dismissTouchHint?.(); // leaving mid-countdown shouldn't leave the control hint stuck on the title
   // Show last run's score where the tagline normally sits (default text if never played).
   const score = game.lastScore();
   tagline.textContent = score > 0 ? `Last run you hit ${score.toLocaleString()} power` : DEFAULT_TAGLINE;
