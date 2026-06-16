@@ -22,7 +22,6 @@
     "@supabase/supabase-js": "^2.108.1",
     "@territory/shared": "*",
     "colyseus.js": "^0.16.0",
-    "eruda": "^3.4.3",
     "pixi.js": "^8.6.6"
   },
   "devDependencies": {
