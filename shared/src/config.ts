@@ -49,7 +49,7 @@ export const CONFIG = {
   DAY_NIGHT_TRANSITION: 10, // seconds of lerp between day and night
   DAY_BG: "#ffffff", // floor background by day
   NIGHT_BG: "#000000", // floor background by night
-  DAY_LINES: "#cccccc", // grid lines by day (grey)
+  DAY_LINES: "#e8ebf1", // grid lines by day (light, so the white floor reads clean/bright not grey)
   NIGHT_LINES: "#8a4fff", // grid lines by night (purple)
   DAY_BORDER: "#1d2430", // avatar border by day (dark, contrasts white floor)
   NIGHT_BORDER: "#e8eaed", // avatar border by night (light, contrasts black floor)
