@@ -19,6 +19,15 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- OAuth deep link: the Google/Apple sign-in redirect comes back to the app via the
+                 io.turfgame.app:// custom scheme (matches REDIRECT in nativeOAuth.ts and the iOS
+                 CFBundleURLTypes). Capacitor's appUrlOpen then exchanges the code for a session. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="io.turfgame.app" />
+            </intent-filter>
         </activity>
 
         <provider
