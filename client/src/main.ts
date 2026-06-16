@@ -1484,47 +1484,8 @@ function applyRunContext(): void {
   }
 }
 
-/**
- * TEMP on-screen debug panel for the native TestFlight build (remove before public release). A plain
- * fixed div (no deps, can't fail to load) that prints the run context + accountsEnabled, and logs
- * every pointerdown / click / error — so we can see on the actual device whether tapping a chip
- * produces a click, and whether a handler throws. pointer-events:none so it never eats taps.
- */
-function initDebugConsole(): void {
-  // TEMP: show unconditionally so we get data regardless of context detection (remove before launch).
-  const box = document.createElement("div");
-  box.style.cssText =
-    "position:fixed;left:4px;bottom:4px;z-index:99999;max-width:64vw;max-height:42vh;overflow:auto;" +
-    "background:rgba(0,0,0,.82);color:#3f6;font:11px/1.35 monospace;padding:6px 8px;border-radius:6px;" +
-    "pointer-events:none;white-space:pre-wrap;";
-  const lines: string[] = [];
-  const log = (m: string): void => {
-    lines.push(m);
-    box.textContent = lines.slice(-14).join("\n");
-  };
-  const id = (e: Event): string => {
-    const t = e.target as Element | null;
-    return t ? t.id || (typeof t.className === "string" ? t.className : "") || t.tagName : "?";
-  };
-  const start = (): void => {
-    document.body.appendChild(box);
-    log("DBG v2");
-    log(`ctx=${runContext()} native=${isNative()} accountsEnabled=${accountsEnabled}`);
-    log(`Capacitor=${typeof (window as unknown as { Capacitor?: unknown }).Capacitor}`);
-    document.addEventListener("pointerdown", (e) => log(`PD ${id(e)}`), true);
-    document.addEventListener("click", (e) => log(`CLICK ${id(e)}`), true);
-    window.addEventListener("error", (e) => log(`ERR ${e.message}`));
-    window.addEventListener("unhandledrejection", (e) =>
-      log(`REJ ${(e.reason && (e.reason.message ?? String(e.reason))) || "?"}`),
-    );
-  };
-  if (document.body) start();
-  else window.addEventListener("DOMContentLoaded", start);
-}
-
 async function boot(): Promise<void> {
   if (isTouchDevice()) document.body.classList.add("touch"); // enables the touch-scoped CSS
-  initDebugConsole();
   applyRunContext();
   void initNativeShell(); // native only: landscape lock, status bar, hide splash
   game = await createGame();
