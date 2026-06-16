@@ -1358,6 +1358,26 @@ function openPremium(): void {
   setVisible(premiumOverlay, true);
 }
 
+/**
+ * After a native IAP, the grant arrives asynchronously (RevenueCat webhook → grant_purchase), so the
+ * balance/membership flags aren't live the instant the purchase dialog closes. Re-fetch the profile a
+ * few times over ~9s; each refresh emits an account change that re-renders the shop + medal counts.
+ * Stops early once the medal balance moves (covers packs); the extra ticks catch membership/ad-free.
+ */
+function pollForGrant(): void {
+  const before = account?.profile?.medals ?? 0;
+  let tries = 0;
+  const tick = (): void => {
+    void refreshAccount().then(() => {
+      tries += 1;
+      const now = account?.profile?.medals ?? 0;
+      if (now !== before || tries >= 6) return;
+      window.setTimeout(tick, 1500);
+    });
+  };
+  window.setTimeout(tick, 1500);
+}
+
 /** Buy a product: store IAP on native, Stripe Checkout on the web; show errors in the given note. */
 function checkout(product: string, note: HTMLElement): void {
   // A purchase must land on an account so it can be granted/restored. Send guests to sign up first
@@ -1377,7 +1397,9 @@ function checkout(product: string, note: HTMLElement): void {
     note.textContent = "Opening store…";
     void nativePurchase(product).then((r) => {
       note.textContent = r.message;
-      if (r.ok) void refreshAccount();
+      // The grant lands async via the RevenueCat → webhook → grant_purchase path, so a single
+      // immediate refresh fetches the pre-grant balance. Poll a few times until it shows up.
+      if (r.ok) pollForGrant();
     });
     return;
   }
