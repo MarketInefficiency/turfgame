@@ -49,6 +49,7 @@ import * as ads from "./ads";
 import { runContext, stripeCheckoutAllowed } from "./platform";
 import { isNative, nativePurchase, nativeRestore } from "./native";
 import { initNativeShell } from "./nativeShell";
+import { nativeOAuth } from "./auth/nativeOAuth";
 
 /**
  * M1 entry point: drive the start screen → join → game flow.
@@ -1035,17 +1036,17 @@ function wireAccount(): void {
       }
     });
   });
-  // OAuth: on success the page redirects to the provider, so we only handle the error case.
+  // OAuth. Web redirects the page to the provider (so .then only fires on error). Native opens the
+  // provider in the system browser and comes back via a deep link, resolving once signed in.
   const oauth = (provider: "google" | "apple") => {
     setAuthMsg("Opening sign in…");
-    void signInWithProvider(provider).then((err) => {
+    const flow = isNative() ? nativeOAuth(provider) : signInWithProvider(provider);
+    void flow.then((err) => {
       if (err) setAuthMsg(err);
+      else if (isNative()) closeAuth(); // native resolves after sign-in; onAccountChange updates the UI
     });
   };
   authGoogle.addEventListener("click", () => oauth("google"));
-  // Apple sign-in via Supabase OAuth. NOTE: the native Apple sheet plugin is Capacitor-7 only and
-  // conflicts with Capacitor 8's SPM graph, so it's removed for now; a Cap-8-compatible native Apple
-  // sign-in must be added back before App Store submission (guideline 4.8).
   authApple.addEventListener("click", () => oauth("apple"));
 }
 

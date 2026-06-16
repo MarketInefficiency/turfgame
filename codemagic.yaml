@@ -46,11 +46,14 @@ workflows:
         script: |
           mkdir -p client/ios/App/App.xcodeproj/xcshareddata/xcschemes
           cp client/ios-config/App.xcscheme client/ios/App/App.xcodeproj/xcshareddata/xcschemes/App.xcscheme
-      - name: Declare encryption exemption (skip the TestFlight "Missing Compliance" prompt)
+      - name: Configure Info.plist (compliance exemption + OAuth deep-link scheme)
         script: |
-          # Standard HTTPS only → exempt. Setting this in Info.plist makes every build auto-clear
-          # export compliance, so builds release to testers without the manual prompt each time.
-          plutil -replace ITSAppUsesNonExemptEncryption -bool NO "client/ios/App/App/Info.plist"
+          PLIST="client/ios/App/App/Info.plist"
+          # Standard HTTPS only → exempt, so every build auto-clears export compliance.
+          plutil -replace ITSAppUsesNonExemptEncryption -bool NO "$PLIST"
+          # Register the io.turfgame.app:// URL scheme so the OAuth redirect deep-links back into the app.
+          plutil -insert CFBundleURLTypes -json '[{"CFBundleURLSchemes":["io.turfgame.app"]}]' "$PLIST" 2>/dev/null \
+            || plutil -replace CFBundleURLTypes -json '[{"CFBundleURLSchemes":["io.turfgame.app"]}]' "$PLIST"
       - name: Generate app icon & splash
         script: |
           cd client
