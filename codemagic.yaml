@@ -46,6 +46,11 @@ workflows:
         script: |
           mkdir -p client/ios/App/App.xcodeproj/xcshareddata/xcschemes
           cp client/ios-config/App.xcscheme client/ios/App/App.xcodeproj/xcshareddata/xcschemes/App.xcscheme
+      - name: Declare encryption exemption (skip the TestFlight "Missing Compliance" prompt)
+        script: |
+          # Standard HTTPS only → exempt. Setting this in Info.plist makes every build auto-clear
+          # export compliance, so builds release to testers without the manual prompt each time.
+          plutil -replace ITSAppUsesNonExemptEncryption -bool NO "client/ios/App/App/Info.plist"
       - name: Generate app icon & splash
         script: |
           cd client
