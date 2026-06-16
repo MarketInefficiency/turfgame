@@ -167,8 +167,9 @@ export class Avatar {
     this.shadow.position.set(0, r * 0.6);
     this.shadow.alpha = 0;
 
-    // White ring → tinted to the day/night border color each frame.
-    this.ring.circle(0, 0, r).stroke({ width: 3, color: 0xffffff });
+    // White ring → tinted to the day/night border color each frame. A touch thicker so the avatar
+    // reads crisply against busy territory and the bright floor.
+    this.ring.circle(0, 0, r).stroke({ width: 3.6, color: 0xffffff });
 
     // Sword (floated above the circle when fighting). The procedural blade can be recoloured; design
     // swords swap in a rasterized sprite. Either lives inside the `sword` container that's animated.
@@ -187,10 +188,10 @@ export class Avatar {
       text: "",
       style: {
         fontFamily: "ui-sans-serif, system-ui, sans-serif",
-        fontSize: 15,
+        fontSize: 16,
         fontWeight: "800",
         fill: "#ffffff",
-        stroke: { color: "#0c0f14", width: 3.5, join: "round" },
+        stroke: { color: "#0c0f14", width: 4.2, join: "round" },
       },
     });
     this.label.anchor.set(0.5);
@@ -454,7 +455,7 @@ export class Avatar {
   /** Day/night feedback: `nf` is 0 (full day) … 1 (full night). Day shows a ground shadow; night
    *  fades that out and raises a warm glow around the avatar. */
   setDayNight(nf: number): void {
-    this.shadow.alpha = (1 - nf) * 0.46; // discrete, but enough to read as a grounded shadow
+    this.shadow.alpha = (1 - nf) * 0.6; // grounded shadow that lifts the avatar off the bright floor
     this.glow.alpha = nf * 0.6;
   }
 

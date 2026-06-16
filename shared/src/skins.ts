@@ -55,3 +55,45 @@ export function lerpHex(a: string, b: string, t: number): string {
 export function hexToNumber(hex: string): number {
   return parseInt(hex.slice(1), 16);
 }
+
+/** #rrggbb → {h (deg), s, l} with s,l in 0..1. */
+function hexToHsl(hex: string): { h: number; s: number; l: number } {
+  const n = parseInt(hex.slice(1), 16);
+  const r = ((n >> 16) & 0xff) / 255;
+  const g = ((n >> 8) & 0xff) / 255;
+  const b = (n & 0xff) / 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  const d = max - min;
+  let h = 0;
+  let s = 0;
+  if (d !== 0) {
+    s = d / (1 - Math.abs(2 * l - 1));
+    if (max === r) h = ((g - b) / d) % 6;
+    else if (max === g) h = (b - r) / d + 2;
+    else h = (r - g) / d + 4;
+    h *= 60;
+    if (h < 0) h += 360;
+  }
+  return { h, s, l };
+}
+
+const vibrantCache = new Map<string, string>();
+
+/**
+ * Punch up a fill colour so claimed land + avatars read vividly on the bright day floor (where flat
+ * mid-tones wash out). Pushes saturation up and gently deepens very-light colours toward a richer
+ * mid; clamped, so already-vivid skins barely move and the day/night-visibility band is preserved.
+ * Cached per colour (called per owner each frame).
+ */
+export function vibrant(hex: string): string {
+  const cached = vibrantCache.get(hex);
+  if (cached) return cached;
+  const { h, s, l } = hexToHsl(hex);
+  const s2 = Math.min(1, s * 1.25 + 0.05);
+  const l2 = l > 0.55 ? l * 0.94 : l; // keep pastels from looking washed without darkening dark hues
+  const out = hslToHex(h, s2 * 100, l2 * 100);
+  vibrantCache.set(hex, out);
+  return out;
+}

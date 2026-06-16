@@ -16,6 +16,7 @@ import {
   lerpHex,
   nightFactor,
   stepMovement,
+  vibrant,
   worldToCellX,
   worldToCellY,
   type ArenaEvent,
@@ -190,9 +191,9 @@ export async function createGame(): Promise<GameView> {
     const dt = Math.min(0.05, ticker.deltaMS / 1000);
     const me = map.get(room.sessionId);
 
-    // Refresh the owner→color table for territory painting.
+    // Refresh the owner→color table for territory painting (vivid fills pop on the bright floor).
     colorByOwner.clear();
-    map.forEach((p) => colorByOwner.set(p.ownerId, p.color));
+    map.forEach((p) => colorByOwner.set(p.ownerId, vibrant(p.color)));
 
     // --- Local prediction + reconciliation (predict only our own avatar) ---
     if (me) {
@@ -383,7 +384,7 @@ export async function createGame(): Promise<GameView> {
         avatars.set(id, a);
         avatarLayer.addChild(a.view);
       }
-      a.setColor(p.color);
+      a.setColor(vibrant(p.color)); // match the vivid territory fill
       const skinItem = shopCatalog.byId("skin", p.skinId ?? "default"); // image/GIF skin?
       const skinUrl = skinItem?.kind === "image" ? (skinItem.imageUrl ?? null) : null;
       a.setSkin(skinUrl); // wraps the avatar circle
@@ -426,7 +427,7 @@ export async function createGame(): Promise<GameView> {
         capitals.set(id, cap);
         capitalLayer.addChild(cap.view);
       }
-      cap.setColor(p.color);
+      cap.setColor(vibrant(p.color)); // match the vivid territory fill
       cap.setDesign(p.capSkin); // capital design cosmetic (same SVG the shop shows)
       cap.setPower(p.capPower);
       cap.place((cellX(p.capCell) + 0.5) * CONFIG.GRID_CELL, (cellY(p.capCell) + 0.5) * CONFIG.GRID_CELL);
