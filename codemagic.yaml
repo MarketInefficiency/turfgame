@@ -50,11 +50,13 @@ workflows:
         script: |
           cd client
           npx @capacitor/assets generate --ios --iconBackgroundColor '#0f1623' --splashBackgroundColor '#0f1623'
-      - name: Set build number (next TestFlight build)
+      - name: Set build number (Codemagic's monotonic counter — always unique)
         script: |
           cd client/ios/App
-          LATEST=$(app-store-connect get-latest-testflight-build-number "$APP_STORE_APPLE_ID" 2>/dev/null || echo 0)
-          agvtool new-version -all $(($LATEST + 1))
+          # Use Codemagic's ever-incrementing project build number. The old "latest TestFlight + 1"
+          # fell back to 1 whenever the App Store query hiccuped, so every build after the first
+          # uploaded as build "1" and Apple rejected it as a duplicate (post-processing failed).
+          agvtool new-version -all "$PROJECT_BUILD_NUMBER"
       - name: Resolve Swift packages (Capacitor 8 SPM)
         script: |
           cd client/ios/App
