@@ -976,7 +976,9 @@ function wireAccount(): void {
     setVisible(authSignedin, s.signedIn);
     if (s.signedIn) {
       authTitle.textContent = "Account";
-      authSub.textContent = `Signed in as ${s.email ?? "your account"}.`;
+      const prov = s.provider === "google" ? "Google" : s.provider === "apple" ? "Apple" : "email";
+      const who = s.email ?? s.profile?.username ?? "your account";
+      authSub.textContent = `Signed in with ${prov} · ${who}`;
     } else {
       setAuthMode(authMode); // restore the form's title, blurb, and button text
     }

@@ -29,11 +29,12 @@ export function isMember(p: Profile | null | undefined): boolean {
 export interface AccountState {
   signedIn: boolean;
   email: string | null;
+  provider: string | null; // how they signed in: "google" | "apple" | "email"
   profile: Profile | null;
 }
 
 let session: Session | null = null;
-let current: AccountState = { signedIn: false, email: null, profile: null };
+let current: AccountState = { signedIn: false, email: null, provider: null, profile: null };
 const listeners = new Set<(s: AccountState) => void>();
 
 /** Access token to hand Colyseus on join (undefined for guests). */
@@ -59,7 +60,7 @@ function emit(): void {
 
 async function refreshProfile(): Promise<void> {
   if (!supabase || !session) {
-    current = { signedIn: false, email: null, profile: null };
+    current = { signedIn: false, email: null, provider: null, profile: null };
     emit();
     return;
   }
@@ -72,6 +73,8 @@ async function refreshProfile(): Promise<void> {
   current = {
     signedIn: true,
     email: session.user.email ?? null,
+    // Supabase records the sign-in method on the user; show it so people know which login they used.
+    provider: (session.user.app_metadata?.provider as string | undefined) ?? null,
     profile: data
       ? {
           username: (data.username as string | null) ?? null,
