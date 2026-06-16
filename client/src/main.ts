@@ -1031,11 +1031,28 @@ function wireAccount(): void {
     void signOut();
     closeAuth();
   });
+  // Two-tap confirm (not window.confirm, which is unreliable in the iOS webview): the first tap arms
+  // it and warns; a second tap within a few seconds actually deletes. Auto-disarms so it can't fire
+  // by accident.
+  let deleteArmed = false;
+  let deleteTimer = 0;
+  const disarmDelete = (): void => {
+    deleteArmed = false;
+    window.clearTimeout(deleteTimer);
+    authDelete.textContent = "Delete my account";
+  };
   authDelete.addEventListener("click", () => {
-    // Two-step confirm so a tap can't nuke an account by accident.
-    if (!confirm("Delete your account for good? Your profile and unlocked cosmetics will be removed. This can't be undone.")) {
+    if (!deleteArmed) {
+      deleteArmed = true;
+      authDelete.textContent = "Tap again to permanently delete";
+      setAuthMsg("This removes your profile and cosmetics for good. This can't be undone.");
+      deleteTimer = window.setTimeout(() => {
+        disarmDelete();
+        setAuthMsg("");
+      }, 4000);
       return;
     }
+    disarmDelete();
     setAuthMsg("Deleting your account…");
     void deleteAccount().then((err) => {
       if (err) {

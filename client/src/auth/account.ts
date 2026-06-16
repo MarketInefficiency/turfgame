@@ -128,7 +128,12 @@ export async function signInWithProvider(provider: "google" | "apple"): Promise<
   if (!supabase) return "Accounts are not available.";
   const { error } = await supabase.auth.signInWithOAuth({
     provider,
-    options: { redirectTo: window.location.origin },
+    options: {
+      redirectTo: window.location.origin,
+      // Always show Google's account chooser, so a signed-out user can switch accounts instead of
+      // being dropped straight back into the one still logged into Google.
+      ...(provider === "google" ? { queryParams: { prompt: "select_account" } } : {}),
+    },
   });
   return error ? error.message : null;
 }

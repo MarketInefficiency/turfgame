@@ -21,7 +21,13 @@ export async function nativeOAuth(provider: "google" | "apple"): Promise<string 
   if (!supabase) return "Accounts are not available.";
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider,
-    options: { redirectTo: REDIRECT, skipBrowserRedirect: true },
+    options: {
+      redirectTo: REDIRECT,
+      skipBrowserRedirect: true,
+      // Force Google's account chooser so signing out and back in can pick a different account
+      // instead of silently re-using the one still logged into Google.
+      ...(provider === "google" ? { queryParams: { prompt: "select_account" } } : {}),
+    },
   });
   if (error || !data?.url) return error?.message ?? "Could not start sign in.";
 
