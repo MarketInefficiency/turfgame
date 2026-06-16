@@ -41,6 +41,11 @@ export function authToken(): string | undefined {
   return session?.access_token;
 }
 
+/** The signed-in player's Supabase user id (used as the RevenueCat app user id). */
+export function authUserId(): string | undefined {
+  return session?.user.id;
+}
+
 /** Subscribe to account changes; fires immediately with the current state. Returns an unsubscribe. */
 export function onAccountChange(fn: (s: AccountState) => void): () => void {
   listeners.add(fn);

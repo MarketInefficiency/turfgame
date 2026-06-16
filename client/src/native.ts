@@ -18,16 +18,14 @@ export interface PurchaseResult {
   message: string;
 }
 
-/** Buy a product through the device store. Never called on web (that path uses Stripe). */
+/** Buy a product through the device store (RevenueCat). Never called on web (that path uses Stripe). */
 export async function nativePurchase(product: string): Promise<PurchaseResult> {
-  // TODO(phase3): RevenueCat purchasePackage(product); the RC→Supabase webhook grants it.
-  console.log("[native] purchase requested:", product);
-  return { ok: false, message: "In-app purchases are being set up. Please check back soon." };
+  const { rcPurchase } = await import("./revenuecat"); // lazy: keeps RevenueCat out of the web bundle
+  return rcPurchase(product);
 }
 
 /** Restore prior non-consumable / subscription purchases (App Store & Play require this). */
 export async function nativeRestore(): Promise<PurchaseResult> {
-  // TODO(phase3): RevenueCat restorePurchases(), then refresh entitlements.
-  console.log("[native] restore requested");
-  return { ok: false, message: "Restoring purchases is being set up. Please check back soon." };
+  const { rcRestore } = await import("./revenuecat");
+  return rcRestore();
 }

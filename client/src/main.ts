@@ -960,6 +960,8 @@ function wireAccount(): void {
 
   onAccountChange((s) => {
     account = s;
+    // Native: tie RevenueCat to this account so IAP purchases credit the right user (lazy import).
+    if (isNative() && s.signedIn) void import("./revenuecat").then((m) => m.rcIdentify());
     homeMedalCount.textContent = (s.profile?.medals ?? 0).toLocaleString(); // 0 by default (incl. guests)
     accountChip.textContent = s.signedIn ? "Account" : "Sign in";
     // The account widget swaps the sign-in form for a Sign out button once you're signed in. The
