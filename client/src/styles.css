@@ -2743,6 +2743,15 @@ body.touch .auth-overlay.kb-open .auth-card {
   body.touch .sp-castle svg {
     height: 54px;
   }
+  /* Wearables/cloak must shrink + recentre with the smaller touch avatar (42px @ right:8px),
+     otherwise they keep the desktop 124px @ right:-22px and drift left off the character. */
+  body.touch .sp-wear,
+  body.touch .sp-cloak {
+    width: 100px;
+    height: 100px;
+    right: -21px;
+    bottom: -29px;
+  }
   body.touch .cz-group {
     margin-bottom: 8px;
   }
