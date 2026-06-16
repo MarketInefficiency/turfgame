@@ -1511,10 +1511,33 @@ function applyRunContext(): void {
   const ctx = runContext();
   document.body.classList.add(`ctx-${ctx}`);
   if (isNative()) {
+    document.body.classList.add("native"); // hides the portrait rotate-gate (OS locks landscape)
     // External payment/donation surfaces aren't allowed alongside store IAP.
     for (const elx of [kofiHome, kofiGame, appStoreLink, playLink]) setVisible(elx, false);
     setVisible(shopRestore, true); // IAP apps must offer Restore Purchases
+    lockPageScroll();
   }
+}
+
+/**
+ * Native webviews rubber-band the whole page on a swipe. Block the document bounce by cancelling
+ * touchmove unless the gesture is inside an element that genuinely scrolls (the shop list, or the
+ * start screen while the keyboard is up). Pointer-based game input is unaffected.
+ */
+function lockPageScroll(): void {
+  document.addEventListener(
+    "touchmove",
+    (e) => {
+      let el = e.target as HTMLElement | null;
+      while (el && el !== document.body && el !== document.documentElement) {
+        const oy = getComputedStyle(el).overflowY;
+        if ((oy === "auto" || oy === "scroll") && el.scrollHeight > el.clientHeight) return; // let it scroll
+        el = el.parentElement;
+      }
+      e.preventDefault(); // nothing scrollable under the finger → kill the page bounce
+    },
+    { passive: false },
+  );
 }
 
 async function boot(): Promise<void> {

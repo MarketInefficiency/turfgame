@@ -47,7 +47,7 @@ workflows:
         script: |
           mkdir -p client/ios/App/App.xcodeproj/xcshareddata/xcschemes
           cp client/ios-config/App.xcscheme client/ios/App/App.xcodeproj/xcshareddata/xcschemes/App.xcscheme
-      - name: Configure Info.plist (compliance exemption + OAuth deep-link scheme)
+      - name: Configure Info.plist (compliance exemption + OAuth deep-link scheme + landscape lock)
         script: |
           PLIST="client/ios/App/App/Info.plist"
           # Standard HTTPS only → exempt, so every build auto-clears export compliance.
@@ -55,6 +55,10 @@ workflows:
           # Register the io.turfgame.app:// URL scheme so the OAuth redirect deep-links back into the app.
           plutil -insert CFBundleURLTypes -json '[{"CFBundleURLSchemes":["io.turfgame.app"]}]' "$PLIST" 2>/dev/null \
             || plutil -replace CFBundleURLTypes -json '[{"CFBundleURLSchemes":["io.turfgame.app"]}]' "$PLIST"
+          # Landscape-only, BOTH directions (iPhone + iPad). The launch splash is then landscape, the
+          # portrait rotate-gate never flashes, and the device can flip between the two landscapes.
+          plutil -replace UISupportedInterfaceOrientations -json '["UIInterfaceOrientationLandscapeLeft","UIInterfaceOrientationLandscapeRight"]' "$PLIST"
+          plutil -replace 'UISupportedInterfaceOrientations~ipad' -json '["UIInterfaceOrientationLandscapeLeft","UIInterfaceOrientationLandscapeRight"]' "$PLIST"
       - name: Generate app icon & splash
         script: |
           cd client

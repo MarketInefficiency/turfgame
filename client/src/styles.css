@@ -2373,6 +2373,11 @@ body.touch .ev-row {
 .rotate-gate {
   display: none;
 }
+/* Native apps are OS-locked to landscape, so the portrait "turn your phone" prompt must never
+   flash on launch. Web/mobile-browser still uses it (they can't lock orientation). */
+body.native .rotate-gate {
+  display: none !important;
+}
 @media (orientation: portrait) {
   body.touch .rotate-gate {
     display: flex;
@@ -2428,7 +2433,8 @@ body.touch .ev-row {
      phone without scrolling. Overflow stays auto as a safety net for the very shortest screens. */
   body.touch #start-screen {
     align-items: flex-start;
-    overflow-y: auto;
+    overflow-y: hidden; /* no rubber-band/scroll on the home screen (kb-open re-enables scroll below) */
+    overscroll-behavior: none;
     padding: 6px 0;
   }
   /* Two columns: a landscape phone is wide but short, so put name + Play on the left and the
