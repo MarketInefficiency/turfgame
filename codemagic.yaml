@@ -29,6 +29,7 @@ workflows:
         VITE_SERVER_URL: "wss://turfgame.io/colyseus"
         VITE_SUPABASE_URL: "https://derxaiqacejjzgdqlsdr.supabase.co"
         VITE_SUPABASE_ANON_KEY: "sb_publishable_IKOiE7lmQucUIlo3300Wlw_hMF6cY4b"
+        VITE_REVENUECAT_IOS_KEY: "appl_luHgNVWFQPwORSdbtcEDTYWqJxd"
       node: 22
       xcode: latest
       cocoapods: default
