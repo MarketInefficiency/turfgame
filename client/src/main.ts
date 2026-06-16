@@ -1491,8 +1491,7 @@ function applyRunContext(): void {
  * produces a click, and whether a handler throws. pointer-events:none so it never eats taps.
  */
 function initDebugConsole(): void {
-  const want = isNative() || new URLSearchParams(location.search).get("debug") === "1";
-  if (!want) return;
+  // TEMP: show unconditionally so we get data regardless of context detection (remove before launch).
   const box = document.createElement("div");
   box.style.cssText =
     "position:fixed;left:4px;bottom:4px;z-index:99999;max-width:64vw;max-height:42vh;overflow:auto;" +
@@ -1509,7 +1508,9 @@ function initDebugConsole(): void {
   };
   const start = (): void => {
     document.body.appendChild(box);
-    log(`ctx=${runContext()} accountsEnabled=${accountsEnabled}`);
+    log("DBG v2");
+    log(`ctx=${runContext()} native=${isNative()} accountsEnabled=${accountsEnabled}`);
+    log(`Capacitor=${typeof (window as unknown as { Capacitor?: unknown }).Capacitor}`);
     document.addEventListener("pointerdown", (e) => log(`PD ${id(e)}`), true);
     document.addEventListener("click", (e) => log(`CLICK ${id(e)}`), true);
     window.addEventListener("error", (e) => log(`ERR ${e.message}`));
