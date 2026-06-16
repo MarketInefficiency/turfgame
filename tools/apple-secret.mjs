@@ -37,5 +37,8 @@ const signer = crypto.createSign("SHA256");
 signer.update(signingInput);
 // ES256 JWTs need the raw r||s signature (IEEE P1363), not Node's default DER.
 const signature = signer.sign({ key: privateKey, dsaEncoding: "ieee-p1363" });
+const token = `${signingInput}.${b64url(signature)}`;
 
-console.log(`${signingInput}.${b64url(signature)}`);
+// Write to a file (no newline) so it copies cleanly — avoids terminal line-wrapping/clip issues.
+fs.writeFileSync("apple-secret.txt", token);
+console.log("Wrote the client secret to apple-secret.txt — open it, copy ALL, paste into Supabase, then delete it.");

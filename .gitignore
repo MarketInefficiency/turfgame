@@ -17,3 +17,6 @@ gifs_to_skin/
 # Supabase CLI local state
 supabase/.temp/
 supabase/.branches/
+
+# Apple client secret output (local only — never commit)
+apple-secret.txt
