@@ -982,6 +982,17 @@ function wireAccount(): void {
     } else {
       setAuthMode(authMode); // restore the form's title, blurb, and button text
     }
+    // Apple/Google already provide the player's name, so fill it in for them instead of asking again.
+    // App Store Guideline 4 forbids requiring name/email after Sign in with Apple. Only fill when the
+    // field is empty or still a guest default, so a returning player's chosen name is never overwritten.
+    if (s.signedIn && s.name) {
+      const cur = nameInput.value.trim();
+      if (!cur || /^guest-\d+$/.test(cur)) {
+        const max = nameInput.maxLength > 0 ? nameInput.maxLength : 16;
+        nameInput.value = s.name.slice(0, max);
+        saveName(nameInput.value);
+      }
+    }
     nameInput.readOnly = false;
     renderShop(); // owned/equipped may have changed
   });
